@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# --- 🛡️ ESCUDO ANTIMISILES (SEGURIDAD DE VARIABLES) ---
+.env
+.env.production
+.env.development
+.env.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
