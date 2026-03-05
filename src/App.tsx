@@ -148,7 +148,6 @@ const generateRealPlan = async (
     if (!apiKey) throw new Error("Falta la API Key de Gemini");
     const genAI = new GoogleGenerativeAI(apiKey.trim());
     
-    // 🔥 ACTUALIZACIÓN CRÍTICA: Usamos gemini-2.5-flash, el modelo vivo actual.
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       generationConfig: { responseMimeType: "application/json" }
@@ -205,7 +204,6 @@ const generateRealPlan = async (
 
     const result = await model.generateContent(basePrompt + "\n" + jsonSchema);
     
-    // Doble blindaje: Aunque le exigimos JSON puro al modelo actualizado, limpiamos posibles restos
     let rawText = result.response.text();
     rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     
@@ -215,9 +213,9 @@ const generateRealPlan = async (
     
     return parsed;
   } catch (error: any) {
-    console.error("Error completo de Gemini:", error);
+    // Registramos el error internamente para nosotros, pero NO se lo enseñamos al usuario.
+    console.error("Error silencioso de IA:", error);
     if (POSTHOG_KEY) posthog.capture('plan_generation_error', { error: error.message });
-    alert(`Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito. (${error.message})`);
     return null;
   }
 };
@@ -1593,8 +1591,12 @@ export default function App() {
     
     setLoading(true);
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig);
-    if (data) setPlan(data);
-    else alert("La IA no ha podido generar la receta. Revisa la consola o intenta de nuevo.");
+    if (data) {
+      setPlan(data);
+    } else {
+      // 🚀 ALERTA AMIGABLE (MR. WONDERFUL) + AVISO DE AD-BLOCKER
+      alert("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito. (Consejo de Chef: Si usas un bloqueador de anuncios en el móvil, puede estar bloqueando la magia).");
+    }
     setLoading(false);
   }, [ingredients, profile, mode, planType, batchConfig]);
 
