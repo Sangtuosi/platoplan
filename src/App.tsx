@@ -126,16 +126,16 @@ const LOADING_MESSAGES = [
   "Afilando los cuchillos virtuales...",
   "Consultando el libro secreto de la abuela...",
   "Precalentando el horno a tope...",
-  "Calculando los tuppers perfectos...",
+  "Calculando cantidades exactas...",
   "Organizando tus comidas de la semana...",
-  "Revisando qué te falta comprar...",
+  "Revisando tu lista de la compra...",
   "Emplatando virtualmente...",
   "Preguntando a los ingredientes qué quieren ser de mayores...",
   "Dándole un toque de amor a cada receta...",
   "Haciendo magia con lo que tienes..."
 ];
 
-// --- 5. LÓGICA DE IA BLINDADA (ZERO BUGS) ---
+// --- 5. LÓGICA DE IA BLINDADA (ZERO BUGS & SMART QUANTITIES) ---
 const generateRealPlan = async (
   apiKey: string,
   ingredients: Ingredient[],
@@ -170,17 +170,16 @@ const generateRealPlan = async (
 
     const modeInstructions = mode === 'aprovechamiento'
       ? `¡ATENCIÓN! ESTÁS EN MODO 'CERO SOBRAS'. REGLA DE ORO: usa EXCLUSIVAMENTE los ingredientes disponibles. PROHIBIDO añadir ingredientes principales nuevos a la 'shopping_list'. 
-        CRÍTICO: El campo 'wasteValue' NUNCA puede ser 0. Debes asignar un valor estimado (Ej: 3.50) que represente el dinero salvado.
-        Además, en la descripción de la receta, incluye frases animadas como "¡Has rescatado un tomate que estaba triste!" o "Estos ingredientes te lo agradecerán".`
+        CRÍTICO: El campo 'wasteValue' NUNCA puede ser 0. Debes asignar un valor estimado (Ej: 3.50) que represente el dinero salvado.`
       : `Estás en MODO CHEF. Libertad creativa. Puedes añadir ingredientes a la 'shopping_list' si es necesario. wasteValue puede ser bajo o 0.`;
 
     const commonRules = `
       REGLAS GENERALES ESTRICTAS:
-      1. GRAMOS EXACTOS. Diferencia cantidades si hay niños (Ej: "Pechuga: 200g adultos, 50g niño").
+      1. GRAMOS EXACTOS. Adapta todo para ${profile.people} personas (${profile.ages}).
       2. Adapta los pasos a: ${profile.robot || 'olla/sartén'}.
-      3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua, azúcar, especias en la 'shopping_list'. Asume que ya las tiene.
-      4. TONO: Las descripciones y pasos deben ser cálidos, con humor y emoción, como si un amigo te animara.
-      5. FORMATO OBLIGATORIO: DEVUELVE ÚNICAMENTE UN JSON VÁLIDO. NO incluyas bloques de código Markdown (como \`\`\`json), NO incluyas texto explicativo antes ni después. SOLO EL JSON PURO.
+      3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua o especias en la 'shopping_list'.
+      4. TONO: Descripciones cálidas y amigables (Mr. Wonderful).
+      5. 🚨 REGLA DE COMPRA (CRÍTICA): En 'shopping_list', los ingredientes DEBEN tener la CANTIDAD EXACTA seguida de la UNIDAD y el NOMBRE. Ejemplos obligatorios: "200 g Zanahoria", "1 ud Cebolla", "500 ml Leche". NUNCA devuelvas solo el nombre del ingrediente.
     `;
 
     if (planType === 'daily') {
@@ -190,7 +189,7 @@ const generateRealPlan = async (
       taskPrompt = `TAREA: BATCH COOKING de ${batchConfig.days} DÍAS. Solo recetas: ${batchConfig.meals.join(" y ")}. 
         REGLA BATCH 1: Prioriza el horno en 'step_by_step' para asar a la vez.
         REGLA BATCH 2: No inventes tareas sin ingredientes.
-        REGLA BATCH 3: En 'storage_tips', di qué plato va en cada tupper (Ej: "Tupper Lunes Comida: Lentejas felices").
+        REGLA BATCH 3: En 'storage_tips', di qué plato va en cada tupper.
         ${modeInstructions}`;
       jsonSchema = `ESTRUCTURA JSON EXACTA: { "type": "batch", "batch_masterclass": { "intro": "Resumen", "storage_tips": ["..."], "step_by_step": [{"phase": "Fase", "tasks": ["..."]}] }, "days": [ { "day": 1, "lunch": {Recipe}, "dinner": {Recipe} } ], "shopping_list": ["Ingrediente 1"] }`;
     }
@@ -222,7 +221,6 @@ const generateRealPlan = async (
 
 // --- 6. COMPONENTES VISUALES COMPARTIDOS ---
 
-// Nuevo CustomAlert para matar el 'alert()' feo del navegador
 const CustomAlert = ({ message, onClose }: { message: string, onClose: () => void }) => {
   if (!message) return null;
   return (
@@ -254,7 +252,6 @@ const FormattedText = ({ text }: { text: string }) => {
   );
 };
 
-// Loader Psicológico mejorado con Timestamp (no se reinicia al cambiar de pestaña)
 const PsychologicalLoader = ({ startTime }: { startTime: number }) => {
   const [progress, setProgress] = useState(0);
   const [msgIdx, setMsgIdx] = useState(0);
@@ -262,13 +259,10 @@ const PsychologicalLoader = ({ startTime }: { startTime: number }) => {
   useEffect(() => {
     const timer = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      // Simulamos que una petición normal dura unos 12-15 segundos
       const calculatedProgress = Math.min(98, Math.floor((elapsed / 14000) * 100));
       setProgress(calculatedProgress);
-      // Cambiamos de mensaje cada 4 segundos
       setMsgIdx(Math.floor(elapsed / 4000) % LOADING_MESSAGES.length);
     }, 500);
-    
     return () => clearInterval(timer);
   }, [startTime]);
 
@@ -781,7 +775,7 @@ const ShoppingView = ({ list, setList, onAlert }: any) => {
   );
 };
 
-// 7.6 HistoryView (El Recetario arreglado)
+// 7.6 HistoryView
 const HistoryView = ({ history, setHistory, onViewRecipe }: any) => {
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
@@ -1171,7 +1165,6 @@ const PlannerView = ({
         </div>
       )}
 
-      {/* AQUÍ INYECTAMOS EL START TIME PARA QUE NO PIERDA LA MEMORIA */}
       {loading && <PsychologicalLoader startTime={loadingStartTime} />}
 
       {plan && !loading && (
@@ -1436,7 +1429,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: any) => {
 // --- 8. MAIN APP ---
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  const [alertMessage, setAlertMessage] = useState(''); // ESTADO GLOBAL PARA EL CUSTOM ALERT
+  const [alertMessage, setAlertMessage] = useState(''); 
   
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
@@ -1470,7 +1463,7 @@ export default function App() {
   const [plan, setPlan] = useState<MealPlan | null>(null);
   
   const [loading, setLoading] = useState(false);
-  const [loadingStartTime, setLoadingStartTime] = useState(0); // SOLUCIÓN DE MEMORIA DE CARGA
+  const [loadingStartTime, setLoadingStartTime] = useState(0); 
   
   const [globalLoading, setGlobalLoading] = useState(true);
   const [mode, setMode] = useState<'aprovechamiento' | 'chef'>('aprovechamiento');
@@ -1501,7 +1494,17 @@ export default function App() {
   }, []);
 
   const loadCloudData = async (uid: string) => {
-    setGlobalLoading(true);
+    // 🚀 UX OPTIMIZATION: Optimistic UI. Si hay datos locales, quitamos la pantalla de carga AL INSTANTE.
+    const localProfileStr = localStorage.getItem('platoplan_profile');
+    if (localProfileStr) {
+      const localProfile = JSON.parse(localProfileStr);
+      setProfile(localProfile);
+      setView('dashboard');
+      setGlobalLoading(false); 
+    } else {
+      setGlobalLoading(true);
+    }
+
     try {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', uid).single();
       const { data: i } = await supabase.from('pantry').select('*').eq('user_id', uid);
@@ -1515,30 +1518,25 @@ export default function App() {
         setProfile({ ...p, allergies: safeAlg });
         setSavings(p.savings || 0);
         setWasteSaved(p.waste_saved || 0);
-        setView('dashboard');
+        if (!localProfileStr) setView('dashboard');
+      } else if (localProfileStr) {
+        const localProfile = JSON.parse(localProfileStr);
+        await supabase.from('profiles').upsert({
+          id: uid,
+          name: localProfile.name,
+          style: localProfile.style,
+          allergies: localProfile.allergies,
+          people: localProfile.people,
+          ages: localProfile.ages,
+          robot: localProfile.robot
+        });
       } else {
-        const localProfileStr = localStorage.getItem('platoplan_profile');
-        if (localProfileStr) {
-          const localProfile = JSON.parse(localProfileStr);
-          setProfile(localProfile);
-          setView('dashboard');
-          await supabase.from('profiles').upsert({
-            id: uid,
-            name: localProfile.name,
-            style: localProfile.style,
-            allergies: localProfile.allergies,
-            people: localProfile.people,
-            ages: localProfile.ages,
-            robot: localProfile.robot
-          });
-        } else {
-          setView('onboarding');
-        }
+        setView('onboarding');
       }
 
-      if (i) setIngredients(i.map((x: any) => ({ ...x, expiryStatus: x.expiry_status })));
-      if (h) setHistory(h.map((x: any) => ({ ...x.recipe_data, date: x.date })));
-      if (l) setShoppingList(l);
+      if (i && i.length > 0) setIngredients(i.map((x: any) => ({ ...x, expiryStatus: x.expiry_status })));
+      if (h && h.length > 0) setHistory(h.map((x: any) => ({ ...x.recipe_data, date: x.date })));
+      if (l && l.length > 0) setShoppingList(l);
       
       if (POSTHOG_KEY && typeof posthog !== 'undefined' && posthog.identify) {
         posthog.identify(uid, { email: user?.email });
@@ -1548,9 +1546,7 @@ export default function App() {
       }
       
     } catch (err) {
-      console.error("Error cargando datos de Supabase", err);
-      if (localStorage.getItem('platoplan_profile')) setView('dashboard');
-      else setView('onboarding');
+      console.error("Sincronización en segundo plano falló, usando caché:", err);
     }
     setGlobalLoading(false);
   };
@@ -1624,13 +1620,13 @@ export default function App() {
     if (ingredients.length === 0) return setAlertMessage("¡Tu nevera está vacía! Añade algún ingrediente primero.");
     
     setLoading(true);
-    setLoadingStartTime(Date.now()); // Activamos el cronómetro inmutable
+    setLoadingStartTime(Date.now()); 
     
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
       setPlan(data);
     } else {
-      setAlertMessage("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito. (Si usas un bloqueador de anuncios estricto, puede estar parando la magia).");
+      setAlertMessage("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito.");
     }
     setLoading(false);
   }, [ingredients, profile, mode, planType, batchConfig]);
@@ -1671,17 +1667,78 @@ export default function App() {
     }
   }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry]);
 
+  // 🌟 INTELIGENCIA DE FUSIÓN DE LISTA DE LA COMPRA 🌟
   const handleAddMissingToShoppingList = useCallback((missingItems: string[]) => {
     if (!missingItems || missingItems.length === 0) return;
     
-    const newItems = missingItems.map(name => ({
-      id: Date.now().toString() + Math.random().toString(),
-      name: name,
-      checked: false
-    }));
+    let updatedList = [...shoppingList];
+
+    // Función interna para leer los datos de la IA (Ej: "200 g Zanahoria" -> { amount: 200, unit: "g", name: "zanahoria" })
+    const parseItem = (str: string) => {
+        const match = str.trim().match(/^([\d.,]+)\s*([a-zA-Z]+)?\s+(de\s+)?(.*)$/i);
+        if (match) {
+            return {
+                amount: parseFloat(match[1].replace(',', '.')),
+                unit: (match[2] || '').toLowerCase(),
+                name: match[4].toLowerCase().trim(),
+                originalName: match[4].trim(),
+            };
+        }
+        return { amount: 0, unit: '', name: str.toLowerCase().trim(), originalName: str.trim() };
+    };
+
+    missingItems.forEach(newItemStr => {
+        const newItem = parseItem(newItemStr);
+        let foundIndex = -1;
+
+        // Buscamos si ya tenemos algo parecido en la lista
+        for (let i = 0; i < updatedList.length; i++) {
+            const existingItem = parseItem(updatedList[i].name);
+            if (existingItem.name === newItem.name || existingItem.name.includes(newItem.name) || newItem.name.includes(existingItem.name)) {
+                foundIndex = i;
+                break;
+            }
+        }
+
+        if (foundIndex !== -1) {
+            // ¡Ya existía! Intentamos sumarlo.
+            const existingItem = parseItem(updatedList[foundIndex].name);
+
+            if (existingItem.amount > 0 && newItem.amount > 0 && existingItem.unit === newItem.unit) {
+                // Tienen la misma unidad (Ej: gramos con gramos), ¡sumamos!
+                const total = existingItem.amount + newItem.amount;
+                updatedList[foundIndex] = {
+                    ...updatedList[foundIndex],
+                    name: `${total} ${newItem.unit} ${newItem.originalName}`,
+                    checked: false 
+                };
+            } else if (existingItem.amount === 0 && newItem.amount > 0) {
+                // Antes no tenía cantidad, ahora le ponemos la nueva
+                 updatedList[foundIndex] = {
+                    ...updatedList[foundIndex],
+                    name: `${newItem.amount} ${newItem.unit} ${newItem.originalName}`,
+                    checked: false
+                };
+            } else {
+                 // Si las unidades no cuadran (Ej: "1 ud" vs "200g"), lo añadimos como fila nueva para no liarla
+                 updatedList.unshift({
+                    id: Date.now().toString() + Math.random().toString(),
+                    name: newItemStr,
+                    checked: false
+                 });
+            }
+        } else {
+            // Es un ingrediente totalmente nuevo
+            updatedList.unshift({
+                id: Date.now().toString() + Math.random().toString(),
+                name: newItemStr,
+                checked: false
+            });
+        }
+    });
     
-    updateList([...newItems, ...shoppingList]);
-    setAlertMessage("¡Ingredientes añadidos a tu lista de compra!");
+    updateList(updatedList);
+    setAlertMessage("¡Ingredientes añadidos y fusionados en tu lista de la compra!");
     if (plan) setPlan({ ...plan, shopping_list: [] });
     if (POSTHOG_KEY) posthog.capture('missing_added_to_shopping', { count: missingItems.length });
   }, [shoppingList, updateList, plan]);
@@ -1703,7 +1760,6 @@ export default function App() {
     );
   }
 
-  // Si estamos en AuthView le pasamos nuestro nuevo onAlert
   if (view === 'auth') return <AuthView onAlert={setAlertMessage} />;
   if (view === 'onboarding') return (
     <OnboardingView
