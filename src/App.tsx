@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import posthog from 'posthog-js';
 import OneSignal from 'react-onesignal';
@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -19,10 +19,8 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY || '';
 const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID || '';
 
-// Inicializar Supabase Real
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Inicializar Analíticas (PostHog) de forma segura
 if (POSTHOG_KEY) {
   posthog.init(POSTHOG_KEY, {
     api_host: 'https://eu.i.posthog.com',
@@ -31,7 +29,6 @@ if (POSTHOG_KEY) {
   });
 }
 
-// Inicializar Push Notifications (OneSignal) de forma segura
 let isOneSignalInitialized = false;
 if (ONESIGNAL_APP_ID) {
   OneSignal.init({ appId: ONESIGNAL_APP_ID, allowLocalhostAsSecureOrigin: true }).then(() => {
@@ -71,7 +68,7 @@ const CustomStyles = () => (
   `}} />
 );
 
-// --- 3. TIPOS E INTERFACES ---
+// --- 3. TIPOS E INTERFACES ESTRICTAS ---
 type ExpiryStatus = 'fresh' | 'soon' | 'urgent';
 type IngredientCat = 'veg' | 'protein' | 'dairy' | 'pantry';
 
@@ -135,7 +132,7 @@ const LOADING_MESSAGES = [
   "Haciendo magia con lo que tienes..."
 ];
 
-// --- 5. LÓGICA DE IA BLINDADA (ZERO BUGS & SMART QUANTITIES) ---
+// --- 5. LÓGICA DE IA (NUEVO ALGORITMO DE FUSIÓN MÉTRICA) ---
 const generateRealPlan = async (
   apiKey: string,
   ingredients: Ingredient[],
@@ -173,13 +170,16 @@ const generateRealPlan = async (
         CRÍTICO: El campo 'wasteValue' NUNCA puede ser 0. Debes asignar un valor estimado (Ej: 3.50) que represente el dinero salvado.`
       : `Estás en MODO CHEF. Libertad creativa. Puedes añadir ingredientes a la 'shopping_list' si es necesario. wasteValue puede ser bajo o 0.`;
 
+    // 🚀 NUEVAS REGLAS ESTRICTAS PARA LA LISTA DE LA COMPRA (ADIÓS AL ERROR DEL CALABACÍN)
     const commonRules = `
       REGLAS GENERALES ESTRICTAS:
       1. GRAMOS EXACTOS. Adapta todo para ${profile.people} personas (${profile.ages}).
       2. Adapta los pasos a: ${profile.robot || 'olla/sartén'}.
       3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua o especias en la 'shopping_list'.
       4. TONO: Descripciones cálidas y amigables (Mr. Wonderful).
-      5. 🚨 REGLA DE COMPRA (CRÍTICA): En 'shopping_list', los ingredientes DEBEN tener la CANTIDAD EXACTA seguida de la UNIDAD y el NOMBRE. Ejemplos obligatorios: "200 g Zanahoria", "1 ud Cebolla", "500 ml Leche". NUNCA devuelvas solo el nombre del ingrediente.
+      5. 🚨 REGLA DE COMPRA (SÚPER CRÍTICA): En 'shopping_list', usa SIEMPRE UNIDADES MÉTRICAS ESTÁNDAR (g o ml). ESTÁ ESTRICTAMENTE PROHIBIDO usar "ud", "unidades", "piezas", "dientes" o "manojos". 
+         Ejemplo: Si necesitas 1 cebolla, calcula su peso y pon "150 g Cebolla". Si es 1 calabacín, pon "300 g Calabacín". Si son huevos, pon "120 g Huevos". 
+         Esto es obligatorio para que el algoritmo pueda sumar cantidades idénticas. El formato debe ser estrictamente: "[Número] [g/ml] [Nombre del ingrediente]".
     `;
 
     if (planType === 'daily') {
@@ -286,8 +286,8 @@ const PsychologicalLoader = ({ startTime }: { startTime: number }) => {
 
 // --- 7. VISTAS PRINCIPALES ---
 
-// 7.1 AuthView
-const AuthView = ({ onAlert }: { onAlert: (msg: string) => void }) => {
+interface AuthViewProps { onAlert: (msg: string) => void; }
+const AuthView = ({ onAlert }: AuthViewProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -355,8 +355,8 @@ const AuthView = ({ onAlert }: { onAlert: (msg: string) => void }) => {
   );
 };
 
-// 7.2 OnboardingView
-const OnboardingView = ({ onComplete, profile, setProfile }: any) => {
+interface OnboardingProps { onComplete: () => void; profile: UserProfile; setProfile: (p: UserProfile) => void; }
+const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) => {
   const [step, setStep] = useState(0); 
   const [customAllergy, setCustomAllergy] = useState('');
   
@@ -487,8 +487,8 @@ const OnboardingView = ({ onComplete, profile, setProfile }: any) => {
   );
 };
 
-// 7.3 DashboardView
-const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: any) => {
+interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; }
+const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: DashboardProps) => {
   const level = useMemo(() => {
     if (savings < 30) return { name: "Pinche con Arte", icon: "🌱", color: "text-stone-500", next: 30 };
     if (savings < 100) return { name: "Chef Saleroso", icon: "👨‍🍳", color: "text-teal-500", next: 100 };
@@ -560,8 +560,8 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: any) =>
   );
 };
 
-// 7.4 PantryView
-const PantryView = ({ ingredients, setIngredients }: any) => {
+interface PantryProps { ingredients: Ingredient[]; setIngredients: (i: Ingredient[]) => void; }
+const PantryView = ({ ingredients, setIngredients }: PantryProps) => {
   const [name, setName] = useState('');
   
   const add = (n: string, cat: IngredientCat = 'pantry') => {
@@ -681,8 +681,8 @@ const PantryView = ({ ingredients, setIngredients }: any) => {
   );
 };
 
-// 7.5 ShoppingView
-const ShoppingView = ({ list, setList, onAlert }: any) => {
+interface ShoppingProps { list: ShoppingItem[]; setList: (l: ShoppingItem[]) => void; onAlert: (m: string) => void; }
+const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   const [n, setN] = useState('');
   
   const add = () => {
@@ -775,8 +775,8 @@ const ShoppingView = ({ list, setList, onAlert }: any) => {
   );
 };
 
-// 7.6 HistoryView
-const HistoryView = ({ history, setHistory, onViewRecipe }: any) => {
+interface HistoryProps { history: Recipe[]; setHistory: (h: Recipe[]) => void; onViewRecipe: (r: Recipe) => void; }
+const HistoryView = ({ history, setHistory, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
   
@@ -849,8 +849,8 @@ const HistoryView = ({ history, setHistory, onViewRecipe }: any) => {
   );
 };
 
-// 7.7 TribeSettings
-const TribeSettings = ({ profile, setProfile, onClose, onLogout }: any) => {
+interface TribeSettingsProps { profile: UserProfile; setProfile: (p: UserProfile) => void; onClose: () => void; onLogout: () => void; onAlert: (m:string)=>void; }
+const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: TribeSettingsProps) => {
   const [l, setL] = useState(profile);
   const [customAllergy, setCustomAllergy] = useState('');
 
@@ -871,13 +871,27 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout }: any) => {
     }
   };
 
+  // 🚀 EL BOTÓN MÁGICO PARA SALTAR EL MURO DE APPLE
+  const requestNotifications = async () => {
+    try {
+      if (typeof window !== 'undefined' && OneSignal && isOneSignalInitialized) {
+        await OneSignal.Slidedown.promptPush();
+      } else {
+        onAlert("Las notificaciones están bloqueadas en tu navegador actual o ya están activas.");
+      }
+    } catch (error) {
+      console.error(error);
+      onAlert("No se pudieron activar las notificaciones. Revisa los ajustes de tu iPhone.");
+    }
+  };
+
   return (
     <div className="bg-white rounded-[2rem] border-2 border-stone-100 p-6 shadow-xl mb-8 animate-in slide-in-from-top-4 relative z-20">
       <button onClick={onClose} className="absolute top-6 right-6 text-stone-400 hover:text-stone-800 bg-stone-100 p-2 rounded-full transition-colors">
         <X size={20}/>
       </button>
       <h2 className="text-2xl font-black text-stone-800 mb-8 flex items-center gap-2">
-        <Settings2 className="text-teal-500"/> Ajustes de Cocina
+        <Settings2 className="text-teal-500"/> Ajustes
       </h2>
       
       <div className="space-y-8">
@@ -960,10 +974,16 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout }: any) => {
           </div>
         </div>
         
-        <div className="pt-4 border-t border-stone-100">
+        <div className="pt-4 border-t border-stone-100 space-y-3">
+          <button
+            onClick={requestNotifications}
+            className="w-full py-4 bg-teal-50 hover:bg-teal-100 text-teal-600 rounded-2xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-teal-100"
+          >
+            <Bell size={18}/> Activar Notificaciones
+          </button>
           <button
             onClick={() => { setProfile(l); onClose(); }}
-            className="w-full py-5 bg-stone-900 hover:bg-black text-white rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all flex justify-center items-center gap-2 mb-4"
+            className="w-full py-5 bg-stone-900 hover:bg-black text-white rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all flex justify-center items-center gap-2"
           >
             <Save size={20}/> Guardar Ajustes
           </button>
@@ -979,12 +999,19 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout }: any) => {
   );
 };
 
-// 7.8 PlannerView
+interface PlannerProps {
+  plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number;
+  onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void;
+  mode: 'aprovechamiento'|'chef'; setMode: (m: 'aprovechamiento'|'chef') => void;
+  profile: UserProfile; setProfile: (p: UserProfile) => void; onViewRecipe: (r: Recipe) => void;
+  batchConfig: BatchConfig; setBatchConfig: (c: BatchConfig) => void; onLogout: () => void;
+  onAddMissingToShoppingList: (i: string[]) => void; onAlert: (m:string)=>void;
+}
 const PlannerView = ({
   plan, onReset, loading, loadingStartTime, onGenerate, planType, setPlanType,
   mode, setMode, profile, setProfile, onViewRecipe,
-  batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList
-}: any) => {
+  batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList, onAlert
+}: PlannerProps) => {
   const [showSettings, setShowSettings] = useState(false);
   const [lunchAlt, setLunchAlt] = useState(false);
   const [dinnerAlt, setDinnerAlt] = useState(false);
@@ -1036,6 +1063,7 @@ const PlannerView = ({
           setProfile={setProfile}
           onClose={() => setShowSettings(false)}
           onLogout={onLogout}
+          onAlert={onAlert}
         />
       ) : (
         <div
@@ -1176,7 +1204,7 @@ const PlannerView = ({
               <h3 className="font-black text-orange-900 text-lg mb-2">Faltan {plan.shopping_list.length} ingredientes</h3>
               <p className="text-sm text-orange-700 font-medium mb-4">La IA ha detectado que necesitas cosas de la tienda para este menú.</p>
               <button
-                onClick={() => onAddMissingToShoppingList(plan.shopping_list)}
+                onClick={() => onAddMissingToShoppingList(plan.shopping_list || [])}
                 className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-[1.5rem] shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 <Plus size={18}/> Añadir a la Compra
@@ -1287,8 +1315,8 @@ const PlannerView = ({
   );
 };
 
-// 7.9 RecipeDetail
-const RecipeDetail = ({ recipe, onBack, onCooked }: any) => {
+interface RecipeDetailProps { recipe: Recipe; onBack: () => void; onCooked: () => void; }
+const RecipeDetail = ({ recipe, onBack, onCooked }: RecipeDetailProps) => {
   const safeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const safeSteps = Array.isArray(recipe?.steps) ? recipe.steps : [];
 
@@ -1364,8 +1392,8 @@ const RecipeDetail = ({ recipe, onBack, onCooked }: any) => {
   );
 };
 
-// 7.10 ConsumptionModal
-const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: any) => {
+interface ConsumptionModalProps { recipe: Recipe; ingredients: Ingredient[]; onConfirm: (c: string[]) => void; onClose: () => void; }
+const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: ConsumptionModalProps) => {
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const relevant = useMemo(() => {
     const match = ingredients.filter((ing: any) =>
@@ -1428,7 +1456,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: any) => {
 
 // --- 8. MAIN APP ---
 export default function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [alertMessage, setAlertMessage] = useState(''); 
   
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -1472,7 +1500,7 @@ export default function App() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setUser(session.user);
         loadCloudData(session.user.id);
@@ -1482,7 +1510,7 @@ export default function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         loadCloudData(session.user.id);
@@ -1494,7 +1522,6 @@ export default function App() {
   }, []);
 
   const loadCloudData = async (uid: string) => {
-    // 🚀 UX OPTIMIZATION: Optimistic UI. Si hay datos locales, quitamos la pantalla de carga AL INSTANTE.
     const localProfileStr = localStorage.getItem('platoplan_profile');
     if (localProfileStr) {
       const localProfile = JSON.parse(localProfileStr);
@@ -1667,13 +1694,11 @@ export default function App() {
     }
   }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry]);
 
-  // 🌟 INTELIGENCIA DE FUSIÓN DE LISTA DE LA COMPRA 🌟
   const handleAddMissingToShoppingList = useCallback((missingItems: string[]) => {
     if (!missingItems || missingItems.length === 0) return;
     
     let updatedList = [...shoppingList];
 
-    // Función interna para leer los datos de la IA (Ej: "200 g Zanahoria" -> { amount: 200, unit: "g", name: "zanahoria" })
     const parseItem = (str: string) => {
         const match = str.trim().match(/^([\d.,]+)\s*([a-zA-Z]+)?\s+(de\s+)?(.*)$/i);
         if (match) {
@@ -1691,7 +1716,6 @@ export default function App() {
         const newItem = parseItem(newItemStr);
         let foundIndex = -1;
 
-        // Buscamos si ya tenemos algo parecido en la lista
         for (let i = 0; i < updatedList.length; i++) {
             const existingItem = parseItem(updatedList[i].name);
             if (existingItem.name === newItem.name || existingItem.name.includes(newItem.name) || newItem.name.includes(existingItem.name)) {
@@ -1701,11 +1725,9 @@ export default function App() {
         }
 
         if (foundIndex !== -1) {
-            // ¡Ya existía! Intentamos sumarlo.
             const existingItem = parseItem(updatedList[foundIndex].name);
 
             if (existingItem.amount > 0 && newItem.amount > 0 && existingItem.unit === newItem.unit) {
-                // Tienen la misma unidad (Ej: gramos con gramos), ¡sumamos!
                 const total = existingItem.amount + newItem.amount;
                 updatedList[foundIndex] = {
                     ...updatedList[foundIndex],
@@ -1713,14 +1735,12 @@ export default function App() {
                     checked: false 
                 };
             } else if (existingItem.amount === 0 && newItem.amount > 0) {
-                // Antes no tenía cantidad, ahora le ponemos la nueva
                  updatedList[foundIndex] = {
                     ...updatedList[foundIndex],
                     name: `${newItem.amount} ${newItem.unit} ${newItem.originalName}`,
                     checked: false
                 };
             } else {
-                 // Si las unidades no cuadran (Ej: "1 ud" vs "200g"), lo añadimos como fila nueva para no liarla
                  updatedList.unshift({
                     id: Date.now().toString() + Math.random().toString(),
                     name: newItemStr,
@@ -1728,7 +1748,6 @@ export default function App() {
                  });
             }
         } else {
-            // Es un ingrediente totalmente nuevo
             updatedList.unshift({
                 id: Date.now().toString() + Math.random().toString(),
                 name: newItemStr,
@@ -1772,7 +1791,6 @@ export default function App() {
   return (
     <div className="h-[100dvh] bg-[#FDFBF7] flex flex-col font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden text-stone-800 selection:bg-teal-200">
       
-      {/* 🌟 AQUÍ SE INYECTA EL NUEVO ALERT NATIVO DE PLATOPLAN 🌟 */}
       <CustomAlert message={alertMessage} onClose={() => setAlertMessage('')} />
 
       <main className="flex-1 overflow-y-auto no-scrollbar pb-28 scroll-smooth">
@@ -1791,7 +1809,7 @@ export default function App() {
           <ShoppingView list={shoppingList} setList={updateList} onAlert={setAlertMessage} />
         )}
         {view === 'history' && (
-          <HistoryView history={history} setHistory={clearHistory} onViewRecipe={(r: any) => { setSelectedRecipe(r); setView('recipe-detail'); }} />
+          <HistoryView history={history} setHistory={clearHistory} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); setView('recipe-detail'); }} />
         )}
         {view === 'planner' && (
           <PlannerView
@@ -1809,14 +1827,15 @@ export default function App() {
             profile={profile}
             setProfile={saveProfileCloud}
             onLogout={handleLogout}
-            onViewRecipe={(r: any) => { setSelectedRecipe(r); setView('recipe-detail'); }}
+            onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); setView('recipe-detail'); }}
             onAddMissingToShoppingList={handleAddMissingToShoppingList}
+            onAlert={setAlertMessage}
           />
         )}
         {view === 'recipe-detail' && selectedRecipe && (
           <RecipeDetail
             recipe={selectedRecipe}
-            onBack={() => setView(history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner')} // Vuelve al Recetario o Planner
+            onBack={() => setView(history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner')} 
             onCooked={() => setShowConfirm(true)}
           />
         )}
