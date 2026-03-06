@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -142,7 +142,8 @@ const generateRealPlan = async (
   profile: UserProfile,
   mode: 'aprovechamiento' | 'chef',
   planType: 'daily' | 'batch',
-  batchConfig: BatchConfig
+  batchConfig: BatchConfig,
+  onAlert: (msg: string) => void
 ): Promise<MealPlan | null> => {
   try {
     if (!apiKey) throw new Error("Falta la API Key de Gemini");
@@ -213,7 +214,6 @@ const generateRealPlan = async (
     
     return parsed;
   } catch (error: any) {
-    // Registramos el error internamente para nosotros, pero NO se lo enseñamos al usuario.
     console.error("Error silencioso de IA:", error);
     if (POSTHOG_KEY) posthog.capture('plan_generation_error', { error: error.message });
     return null;
@@ -221,6 +221,25 @@ const generateRealPlan = async (
 };
 
 // --- 6. COMPONENTES VISUALES COMPARTIDOS ---
+
+// Nuevo CustomAlert para matar el 'alert()' feo del navegador
+const CustomAlert = ({ message, onClose }: { message: string, onClose: () => void }) => {
+  if (!message) return null;
+  return (
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-[200] animate-in fade-in">
+      <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 text-center border-2 border-stone-100">
+        <div className="w-16 h-16 bg-teal-50 text-teal-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <AlertCircle size={32} className="animate-wiggle" />
+        </div>
+        <p className="text-stone-800 font-bold text-lg mb-8 leading-relaxed">{message}</p>
+        <button onClick={onClose} className="w-full py-4 bg-stone-900 hover:bg-black text-white rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-md">
+          Entendido
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const FormattedText = ({ text }: { text: string }) => {
   if (typeof text !== 'string') return null;
   const parts = text.split(/(\*\*.*?\*\*)/g);
@@ -235,19 +254,23 @@ const FormattedText = ({ text }: { text: string }) => {
   );
 };
 
-const PsychologicalLoader = () => {
+// Loader Psicológico mejorado con Timestamp (no se reinicia al cambiar de pestaña)
+const PsychologicalLoader = ({ startTime }: { startTime: number }) => {
   const [progress, setProgress] = useState(0);
   const [msgIdx, setMsgIdx] = useState(0);
   
   useEffect(() => {
-    const pTimer = setInterval(() => setProgress(old => {
-      const increment = old > 85 ? 1 : Math.floor(Math.random() * 3) + 1;
-      return old < 96 ? old + increment : old;
-    }), 1200);
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      // Simulamos que una petición normal dura unos 12-15 segundos
+      const calculatedProgress = Math.min(98, Math.floor((elapsed / 14000) * 100));
+      setProgress(calculatedProgress);
+      // Cambiamos de mensaje cada 4 segundos
+      setMsgIdx(Math.floor(elapsed / 4000) % LOADING_MESSAGES.length);
+    }, 500);
     
-    const mTimer = setInterval(() => setMsgIdx(prev => (prev + 1) % LOADING_MESSAGES.length), 4000); 
-    return () => { clearInterval(pTimer); clearInterval(mTimer); };
-  }, []);
+    return () => clearInterval(timer);
+  }, [startTime]);
 
   return (
     <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-stone-100 shadow-xl animate-in fade-in zoom-in-95 mt-6">
@@ -262,7 +285,7 @@ const PsychologicalLoader = () => {
       <div className="w-3/4 mx-auto bg-stone-100 h-4 rounded-full overflow-hidden shadow-inner relative">
         <div className="absolute top-0 left-0 h-full bg-teal-500 rounded-full transition-all duration-300 ease-out progress-bar-stripes" style={{width: `${Math.min(progress, 98)}%`}}></div>
       </div>
-      <p className="text-teal-600 font-black mt-3 text-sm">{Math.min(progress, 98)}%</p>
+      <p className="text-teal-600 font-black mt-3 text-sm">{progress}%</p>
     </div>
   );
 };
@@ -270,25 +293,25 @@ const PsychologicalLoader = () => {
 // --- 7. VISTAS PRINCIPALES ---
 
 // 7.1 AuthView
-const AuthView = () => {
+const AuthView = ({ onAlert }: { onAlert: (msg: string) => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
   const handleAuth = async () => {
-    if (!email || !password) return alert("Por favor, rellena todos los campos.");
+    if (!email || !password) return onAlert("Por favor, rellena todos los campos.");
     setLoading(true);
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (error) alert(error.message);
+      if (error) onAlert(error.message);
       else {
         if (POSTHOG_KEY) posthog.capture('user_signed_up');
-        alert("¡Cuenta creada! Ya puedes iniciar sesión.");
+        onAlert("¡Cuenta creada! Ya puedes iniciar sesión.");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert("Error al iniciar sesión: " + error.message);
+      if (error) onAlert("Error al iniciar sesión: " + error.message);
       else if (POSTHOG_KEY) posthog.capture('user_logged_in');
     }
     setLoading(false);
@@ -665,7 +688,7 @@ const PantryView = ({ ingredients, setIngredients }: any) => {
 };
 
 // 7.5 ShoppingView
-const ShoppingView = ({ list, setList }: any) => {
+const ShoppingView = ({ list, setList, onAlert }: any) => {
   const [n, setN] = useState('');
   
   const add = () => {
@@ -690,7 +713,7 @@ const ShoppingView = ({ list, setList }: any) => {
       dummy.select();
       document.execCommand("copy");
       document.body.removeChild(dummy);
-      alert("¡Copiado al portapapeles!");
+      onAlert("¡Copiado al portapapeles!");
     }
   };
 
@@ -758,8 +781,8 @@ const ShoppingView = ({ list, setList }: any) => {
   );
 };
 
-// 7.6 HistoryView
-const HistoryView = ({ history, setHistory }: any) => {
+// 7.6 HistoryView (El Recetario arreglado)
+const HistoryView = ({ history, setHistory, onViewRecipe }: any) => {
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
   
@@ -767,12 +790,12 @@ const HistoryView = ({ history, setHistory }: any) => {
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-black text-stone-800">El Libro</h1>
-          <p className="text-stone-400 text-sm font-medium italic mt-1">Tu museo de recetas.</p>
+          <h1 className="text-3xl font-black text-stone-800">El Recetario</h1>
+          <p className="text-stone-400 text-sm font-medium italic mt-1">Tus platos estrella guardados.</p>
         </div>
         {history.length > 0 && (
           <button
-            onClick={() => { if (confirm("¿Seguro que quieres borrar tus logros?")) setHistory([]); }}
+            onClick={() => { if (confirm("¿Seguro que quieres borrar tus recetas?")) setHistory([]); }}
             className="text-rose-400 p-3 bg-white rounded-xl shadow-sm border border-stone-100 hover:bg-rose-50 transition-colors"
           >
             <Trash size={20}/>
@@ -796,7 +819,7 @@ const HistoryView = ({ history, setHistory }: any) => {
         <div className="text-center py-20 opacity-30">
           <Star size={56} className="mx-auto mb-4"/>
           <p className="font-bold text-lg text-stone-500">
-            {history.length === 0 ? 'Página en blanco.' : 'No encontré esa receta.'}
+            {history.length === 0 ? 'Recetario en blanco.' : 'No encontré esa receta.'}
           </p>
           {history.length === 0 && <p className="text-sm text-stone-400">¡A los fogones!</p>}
         </div>
@@ -805,7 +828,8 @@ const HistoryView = ({ history, setHistory }: any) => {
           {filtered.map((r: any, i: number) => (
             <div
               key={i}
-              className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 shadow-sm flex justify-between items-center hover:shadow-md transition-shadow group animate-fade-slide"
+              onClick={() => onViewRecipe(r)}
+              className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 shadow-sm flex justify-between items-center hover:shadow-md transition-all group animate-fade-slide cursor-pointer hover:border-teal-200"
               style={{ animationDelay: `${i * 50}ms` }}
             >
               <div className="flex-1 pr-4">
@@ -815,8 +839,13 @@ const HistoryView = ({ history, setHistory }: any) => {
                   <Flame size={12} className="text-orange-400"/> {r.calories} kcal
                 </p>
               </div>
-              <div className="bg-teal-50 text-teal-600 font-black px-4 py-3 rounded-[1rem] text-lg shadow-sm border border-teal-100">
-                +{r.wasteValue}€
+              <div className="flex flex-col items-end gap-2">
+                <div className="bg-teal-50 text-teal-600 font-black px-4 py-2 rounded-[1rem] text-sm shadow-sm border border-teal-100">
+                  +{r.wasteValue}€
+                </div>
+                <div className="bg-stone-50 p-2 rounded-full text-stone-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                  <ChevronRight size={18}/>
+                </div>
               </div>
             </div>
           ))}
@@ -958,7 +987,7 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout }: any) => {
 
 // 7.8 PlannerView
 const PlannerView = ({
-  plan, onReset, loading, onGenerate, planType, setPlanType,
+  plan, onReset, loading, loadingStartTime, onGenerate, planType, setPlanType,
   mode, setMode, profile, setProfile, onViewRecipe,
   batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList
 }: any) => {
@@ -1142,7 +1171,8 @@ const PlannerView = ({
         </div>
       )}
 
-      {loading && <PsychologicalLoader />}
+      {/* AQUÍ INYECTAMOS EL START TIME PARA QUE NO PIERDA LA MEMORIA */}
+      {loading && <PsychologicalLoader startTime={loadingStartTime} />}
 
       {plan && !loading && (
         <div className="space-y-6 animate-in slide-in-from-bottom-8">
@@ -1406,6 +1436,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: any) => {
 // --- 8. MAIN APP ---
 export default function App() {
   const [user, setUser] = useState<any>(null);
+  const [alertMessage, setAlertMessage] = useState(''); // ESTADO GLOBAL PARA EL CUSTOM ALERT
   
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
@@ -1437,7 +1468,10 @@ export default function App() {
   
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [plan, setPlan] = useState<MealPlan | null>(null);
+  
   const [loading, setLoading] = useState(false);
+  const [loadingStartTime, setLoadingStartTime] = useState(0); // SOLUCIÓN DE MEMORIA DE CARGA
+  
   const [globalLoading, setGlobalLoading] = useState(true);
   const [mode, setMode] = useState<'aprovechamiento' | 'chef'>('aprovechamiento');
   const [planType, setPlanType] = useState<'daily' | 'batch'>('daily');
@@ -1577,7 +1611,7 @@ export default function App() {
   }, [user]);
 
   const clearHistory = useCallback(async () => {
-    if (confirm("¿Seguro que quieres borrar tus logros?")) {
+    if (confirm("¿Seguro que quieres borrar tus recetas guardadas?")) {
       setHistory([]);
       localStorage.setItem('platoplan_history', '[]');
       if (user) await supabase.from('history').delete().eq('user_id', user.id);
@@ -1586,16 +1620,17 @@ export default function App() {
   }, [user]);
 
   const generate = useCallback(async () => {
-    if (!GEMINI_API_KEY) return alert("Falta configurar la variable VITE_GEMINI_API_KEY en Vercel o en tu .env local.");
-    if (ingredients.length === 0) return alert("¡Añade algo a la nevera primero!");
+    if (!GEMINI_API_KEY) return setAlertMessage("Falta configurar la clave de la IA. Tu cocina no tiene magia ahora mismo.");
+    if (ingredients.length === 0) return setAlertMessage("¡Tu nevera está vacía! Añade algún ingrediente primero.");
     
     setLoading(true);
-    const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig);
+    setLoadingStartTime(Date.now()); // Activamos el cronómetro inmutable
+    
+    const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
       setPlan(data);
     } else {
-      // 🚀 ALERTA AMIGABLE (MR. WONDERFUL) + AVISO DE AD-BLOCKER
-      alert("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito. (Consejo de Chef: Si usas un bloqueador de anuncios en el móvil, puede estar bloqueando la magia).");
+      setAlertMessage("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito. (Si usas un bloqueador de anuncios estricto, puede estar parando la magia).");
     }
     setLoading(false);
   }, [ingredients, profile, mode, planType, batchConfig]);
@@ -1646,7 +1681,7 @@ export default function App() {
     }));
     
     updateList([...newItems, ...shoppingList]);
-    alert(`¡Añadidos a la lista de compra!`);
+    setAlertMessage("¡Ingredientes añadidos a tu lista de compra!");
     if (plan) setPlan({ ...plan, shopping_list: [] });
     if (POSTHOG_KEY) posthog.capture('missing_added_to_shopping', { count: missingItems.length });
   }, [shoppingList, updateList, plan]);
@@ -1668,7 +1703,8 @@ export default function App() {
     );
   }
 
-  if (view === 'auth') return <AuthView />;
+  // Si estamos en AuthView le pasamos nuestro nuevo onAlert
+  if (view === 'auth') return <AuthView onAlert={setAlertMessage} />;
   if (view === 'onboarding') return (
     <OnboardingView
       profile={profile}
@@ -1679,6 +1715,10 @@ export default function App() {
 
   return (
     <div className="h-[100dvh] bg-[#FDFBF7] flex flex-col font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden text-stone-800 selection:bg-teal-200">
+      
+      {/* 🌟 AQUÍ SE INYECTA EL NUEVO ALERT NATIVO DE PLATOPLAN 🌟 */}
+      <CustomAlert message={alertMessage} onClose={() => setAlertMessage('')} />
+
       <main className="flex-1 overflow-y-auto no-scrollbar pb-28 scroll-smooth">
         {view === 'dashboard' && (
           <DashboardView
@@ -1692,16 +1732,17 @@ export default function App() {
           <PantryView ingredients={ingredients} setIngredients={updatePantry} />
         )}
         {view === 'shopping' && (
-          <ShoppingView list={shoppingList} setList={updateList} />
+          <ShoppingView list={shoppingList} setList={updateList} onAlert={setAlertMessage} />
         )}
         {view === 'history' && (
-          <HistoryView history={history} setHistory={clearHistory} />
+          <HistoryView history={history} setHistory={clearHistory} onViewRecipe={(r: any) => { setSelectedRecipe(r); setView('recipe-detail'); }} />
         )}
         {view === 'planner' && (
           <PlannerView
             plan={plan}
             onReset={() => setPlan(null)}
             loading={loading}
+            loadingStartTime={loadingStartTime}
             onGenerate={generate}
             planType={planType}
             setPlanType={setPlanType}
@@ -1719,7 +1760,7 @@ export default function App() {
         {view === 'recipe-detail' && selectedRecipe && (
           <RecipeDetail
             recipe={selectedRecipe}
-            onBack={() => setView('planner')}
+            onBack={() => setView(history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner')} // Vuelve al Recetario o Planner
             onCooked={() => setShowConfirm(true)}
           />
         )}
@@ -1782,7 +1823,7 @@ export default function App() {
             }`}
           >
             <BookOpen size={26} strokeWidth={view === 'history' ? 3 : 2.5}/>
-            <span className="text-[10px] font-black uppercase tracking-wider">Logros</span>
+            <span className="text-[10px] font-black uppercase tracking-wider">Recetario</span>
           </button>
         </div>
       )}
