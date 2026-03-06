@@ -500,19 +500,19 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
   const GREETINGS = ["Hoy huele a éxito", "¡A por todas, chef!", "Tu cocina manda", "Preparando magia...", "¡Día perfecto para cocinar!", "La nevera te sonríe", "Arte en los fogones"];
   const dailyGreeting = GREETINGS[new Date().getDay() % GREETINGS.length];
 
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem('welcome_notification_sent');
+    if (!hasSeenWelcome && isOneSignalInitialized) {
+      OneSignal.sendTag('user_level', level.name);
+      OneSignal.sendOutcome('dashboard_viewed');
+      localStorage.setItem('welcome_notification_sent', 'true');
+    }
+  }, [level.name]);
+
   return (
     <div className="p-6 pt-10 pb-32 animate-in fade-in duration-500 bg-[#FDFBF7] min-h-full">
       <CustomStyles/>
       
-      {/* 🚀 EL MURO FREEMIUM VISUAL (Para preparar la monetización) */}
-      <div className="flex justify-between items-center mb-6 bg-stone-900 text-white p-3 px-5 rounded-2xl shadow-md cursor-pointer hover:bg-black transition-colors active:scale-95">
-        <div className="flex items-center gap-2">
-          <Zap size={16} className="text-yellow-400" />
-          <span className="font-bold text-sm">3/3 Magias Hoy</span>
-        </div>
-        <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-lg">Hazte PRO</span>
-      </div>
-
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, {profileName}!</h1>
@@ -837,12 +837,9 @@ interface TribeSettingsProps { profile: UserProfile; setProfile: (p: UserProfile
 const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: TribeSettingsProps) => {
   const [l, setL] = useState(profile);
   const [customAllergy, setCustomAllergy] = useState('');
-  
-  // 🚀 ESTADO INTELIGENTE DEL BOTÓN DE NOTIFICACIONES
   const [pushGranted, setPushGranted] = useState(false);
 
   useEffect(() => {
-    // Comprobamos si ya dio permiso en el pasado para ocultar el botón
     if (typeof window !== 'undefined' && OneSignal && isOneSignalInitialized) {
       setPushGranted(Notification.permission === "granted");
     }
@@ -852,7 +849,9 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
     const current = Array.isArray(l.allergies) ? l.allergies : [];
     setL({
       ...l,
-      allergies: current.includes(allergy) ? current.filter((a: string) => a !== allergy) : [...current, allergy]
+      allergies: current.includes(allergy)
+        ? current.filter((a: string) => a !== allergy)
+        : [...current, allergy]
     });
   };
   
@@ -967,7 +966,6 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
         </div>
         
         <div className="pt-4 border-t border-stone-100 space-y-3">
-          {/* 🚀 BOTÓN INTELIGENTE: Desaparece si ya le diste permiso */}
           {!pushGranted ? (
             <button
               onClick={requestNotifications}
@@ -1459,6 +1457,7 @@ export default function App() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [alertMessage, setAlertMessage] = useState(''); 
   
+  // 🚀 INYECCIÓN DE MEMORIA FOTOGRÁFICA EN ESTADOS
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
       const s = localStorage.getItem('platoplan_profile');
@@ -1473,8 +1472,10 @@ export default function App() {
     return { name: 'Chef', style: 'Clásica', allergies: [], people: 2, ages: '', robot: '' };
   });
   
-  const [view, setView] = useState<ViewState>('auth');
-  
+  const [view, setView] = useState<ViewState>(() => {
+    return (localStorage.getItem('platoplan_current_view') as ViewState) || 'auth';
+  });
+
   const [savings, setSavings] = useState(() => parseFloat(localStorage.getItem('platoplan_savings') || '0'));
   const [wasteSaved, setWasteSaved] = useState(() => parseFloat(localStorage.getItem('platoplan_waste') || '0'));
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
@@ -1487,18 +1488,50 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('platoplan_list') || '[]'); } catch (e) { return []; }
   });
   
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
-  const [plan, setPlan] = useState<MealPlan | null>(null);
+  // 🚀 MEMORIA FOTOGRÁFICA DE RECETAS (Evita pérdida al minimizar)
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(() => {
+    try { return JSON.parse(localStorage.getItem('platoplan_selected_recipe') || 'null'); } catch(e) { return null; }
+  });
+  const [plan, setPlan] = useState<MealPlan | null>(() => {
+    try { return JSON.parse(localStorage.getItem('platoplan_current_plan') || 'null'); } catch(e) { return null; }
+  });
   
   const [loading, setLoading] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState(0); 
-  
   const [globalLoading, setGlobalLoading] = useState(true);
   const [mode, setMode] = useState<'aprovechamiento' | 'chef'>('aprovechamiento');
   const [planType, setPlanType] = useState<'daily' | 'batch'>('daily');
   const [batchConfig, setBatchConfig] = useState<BatchConfig>({ days: 3, meals: ['lunch', 'dinner'] });
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // 🚀 NAVEGADOR BLINDADO (Conecta React con el botón físico del móvil)
+  const navigateTo = useCallback((newView: ViewState) => {
+    localStorage.setItem('platoplan_current_view', newView);
+    setView(newView);
+    window.history.pushState({ view: newView }, '');
+  }, []);
+
+  useEffect(() => {
+    // Registramos la primera vista en el historial del navegador
+    window.history.replaceState({ view }, '');
+
+    // Escuchamos cuando el usuario pulsa el botón FÍSICO "Atrás" en Android/iOS
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.view) {
+        setView(event.state.view);
+        localStorage.setItem('platoplan_current_view', event.state.view);
+      } else {
+        // Modo salvavidas: si falla el historial, lo llevamos a inicio pero no cerramos la app
+        setView('dashboard');
+        localStorage.setItem('platoplan_current_view', 'dashboard');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // --- ARRANQUE DE SESIÓN ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -1506,7 +1539,7 @@ export default function App() {
         loadCloudData(session.user.id);
       } else {
         setGlobalLoading(false);
-        setView('auth');
+        navigateTo('auth');
       }
     });
 
@@ -1515,7 +1548,7 @@ export default function App() {
       if (session?.user) {
         loadCloudData(session.user.id);
       } else {
-        setView('auth');
+        navigateTo('auth');
       }
     });
     return () => subscription.unsubscribe();
@@ -1526,7 +1559,14 @@ export default function App() {
     if (localProfileStr) {
       const localProfile = JSON.parse(localProfileStr);
       setProfile(localProfile);
-      setView('dashboard');
+      
+      // Si estamos en auth, forzamos dashboard. Si ya estábamos en una receta, la respetamos.
+      const currentStoredView = localStorage.getItem('platoplan_current_view') as ViewState;
+      if (!currentStoredView || currentStoredView === 'auth') {
+         navigateTo('dashboard');
+      } else {
+         navigateTo(currentStoredView);
+      }
       setGlobalLoading(false); 
     } else {
       setGlobalLoading(true);
@@ -1545,7 +1585,7 @@ export default function App() {
         setProfile({ ...p, allergies: safeAlg });
         setSavings(p.savings || 0);
         setWasteSaved(p.waste_saved || 0);
-        if (!localProfileStr) setView('dashboard');
+        if (!localProfileStr) navigateTo('dashboard');
       } else if (localProfileStr) {
         const localProfile = JSON.parse(localProfileStr);
         await supabase.from('profiles').upsert({
@@ -1558,7 +1598,7 @@ export default function App() {
           robot: localProfile.robot
         });
       } else {
-        setView('onboarding');
+        navigateTo('onboarding');
       }
 
       if (i && i.length > 0) setIngredients(i.map((x: any) => ({ ...x, expiryStatus: x.expiry_status })));
@@ -1652,6 +1692,7 @@ export default function App() {
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
       setPlan(data);
+      localStorage.setItem('platoplan_current_plan', JSON.stringify(data)); // GUARDA A FUEGO EL PLAN
     } else {
       setAlertMessage("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito.");
     }
@@ -1690,9 +1731,10 @@ export default function App() {
       
       setShowConfirm(false);
       setSelectedRecipe(null);
-      setView('dashboard');
+      localStorage.removeItem('platoplan_selected_recipe'); // LIMPIA LA MEMORIA FOTOGRÁFICA
+      navigateTo('dashboard');
     }
-  }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry]);
+  }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo]);
 
   const handleAddMissingToShoppingList = useCallback((missingItems: string[]) => {
     if (!missingItems || missingItems.length === 0) return;
@@ -1758,7 +1800,11 @@ export default function App() {
     
     updateList(updatedList);
     setAlertMessage("¡Ingredientes añadidos y fusionados en tu lista de la compra!");
-    if (plan) setPlan({ ...plan, shopping_list: [] });
+    if (plan) {
+      const newPlan = { ...plan, shopping_list: [] };
+      setPlan(newPlan);
+      localStorage.setItem('platoplan_current_plan', JSON.stringify(newPlan));
+    }
     if (POSTHOG_KEY) posthog.capture('missing_added_to_shopping', { count: missingItems.length });
   }, [shoppingList, updateList, plan]);
 
@@ -1784,7 +1830,7 @@ export default function App() {
     <OnboardingView
       profile={profile}
       setProfile={setProfile}
-      onComplete={() => { saveProfileCloud(profile); setView('dashboard'); }}
+      onComplete={() => { saveProfileCloud(profile); navigateTo('dashboard'); }}
     />
   );
 
@@ -1809,12 +1855,23 @@ export default function App() {
           <ShoppingView list={shoppingList} setList={updateList} onAlert={setAlertMessage} />
         )}
         {view === 'history' && (
-          <HistoryView history={history} setHistory={clearHistory} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); setView('recipe-detail'); }} />
+          <HistoryView 
+            history={history} 
+            setHistory={clearHistory} 
+            onViewRecipe={(r: Recipe) => { 
+              setSelectedRecipe(r); 
+              localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r));
+              navigateTo('recipe-detail'); 
+            }} 
+          />
         )}
         {view === 'planner' && (
           <PlannerView
             plan={plan}
-            onReset={() => setPlan(null)}
+            onReset={() => {
+              setPlan(null);
+              localStorage.removeItem('platoplan_current_plan'); // PURGA LA MEMORIA FOTOGRÁFICA
+            }}
             loading={loading}
             loadingStartTime={loadingStartTime}
             onGenerate={generate}
@@ -1827,7 +1884,11 @@ export default function App() {
             profile={profile}
             setProfile={saveProfileCloud}
             onLogout={handleLogout}
-            onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); setView('recipe-detail'); }}
+            onViewRecipe={(r: Recipe) => { 
+              setSelectedRecipe(r); 
+              localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r));
+              navigateTo('recipe-detail'); 
+            }}
             onAddMissingToShoppingList={handleAddMissingToShoppingList}
             onAlert={setAlertMessage}
           />
@@ -1835,7 +1896,12 @@ export default function App() {
         {view === 'recipe-detail' && selectedRecipe && (
           <RecipeDetail
             recipe={selectedRecipe}
-            onBack={() => setView(history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner')} 
+            onBack={() => {
+              // Limpiamos la receta actual y volvemos de forma segura a donde estábamos
+              localStorage.removeItem('platoplan_selected_recipe');
+              const prevView = history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner';
+              navigateTo(prevView);
+            }} 
             onCooked={() => setShowConfirm(true)}
           />
         )}
@@ -1856,7 +1922,7 @@ export default function App() {
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
         >
           <button
-            onClick={() => setView('dashboard')}
+            onClick={() => navigateTo('dashboard')}
             className={`flex flex-col items-center gap-1.5 transition-all ${
               view === 'dashboard' ? 'text-[#5CB82C] scale-105' : 'text-stone-300 hover:text-stone-500'
             }`}
@@ -1865,7 +1931,7 @@ export default function App() {
             <span className="text-[10px] font-black uppercase tracking-wider">Panel</span>
           </button>
           <button
-            onClick={() => setView('pantry')}
+            onClick={() => navigateTo('pantry')}
             className={`flex flex-col items-center gap-1.5 transition-all ${
               view === 'pantry' ? 'text-[#5CB82C] scale-105' : 'text-stone-300 hover:text-stone-500'
             }`}
@@ -1874,7 +1940,7 @@ export default function App() {
             <span className="text-[10px] font-black uppercase tracking-wider">Nevera</span>
           </button>
           <button
-            onClick={() => setView('planner')}
+            onClick={() => navigateTo('planner')}
             className={`flex flex-col items-center gap-1.5 transition-all ${
               view === 'planner' ? 'text-[#5CB82C] scale-105' : 'text-stone-300 hover:text-stone-500'
             }`}
@@ -1883,7 +1949,7 @@ export default function App() {
             <span className="text-[10px] font-black uppercase tracking-wider">Magia</span>
           </button>
           <button
-            onClick={() => setView('shopping')}
+            onClick={() => navigateTo('shopping')}
             className={`flex flex-col items-center gap-1.5 transition-all ${
               view === 'shopping' ? 'text-[#5CB82C] scale-105' : 'text-stone-300 hover:text-stone-500'
             }`}
@@ -1892,7 +1958,7 @@ export default function App() {
             <span className="text-[10px] font-black uppercase tracking-wider">Compra</span>
           </button>
           <button
-            onClick={() => setView('history')}
+            onClick={() => navigateTo('history')}
             className={`flex flex-col items-center gap-1.5 transition-all ${
               view === 'history' ? 'text-[#5CB82C] scale-105' : 'text-stone-300 hover:text-stone-500'
             }`}
