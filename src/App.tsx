@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Zap
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -170,7 +170,6 @@ const generateRealPlan = async (
         CRÍTICO: El campo 'wasteValue' NUNCA puede ser 0. Debes asignar un valor estimado (Ej: 3.50) que represente el dinero salvado.`
       : `Estás en MODO CHEF. Libertad creativa. Puedes añadir ingredientes a la 'shopping_list' si es necesario. wasteValue puede ser bajo o 0.`;
 
-    // 🚀 NUEVAS REGLAS ESTRICTAS PARA LA LISTA DE LA COMPRA (ADIÓS AL ERROR DEL CALABACÍN)
     const commonRules = `
       REGLAS GENERALES ESTRICTAS:
       1. GRAMOS EXACTOS. Adapta todo para ${profile.people} personas (${profile.ages}).
@@ -501,18 +500,19 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
   const GREETINGS = ["Hoy huele a éxito", "¡A por todas, chef!", "Tu cocina manda", "Preparando magia...", "¡Día perfecto para cocinar!", "La nevera te sonríe", "Arte en los fogones"];
   const dailyGreeting = GREETINGS[new Date().getDay() % GREETINGS.length];
 
-  useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem('welcome_notification_sent');
-    if (!hasSeenWelcome && isOneSignalInitialized) {
-      OneSignal.sendTag('user_level', level.name);
-      OneSignal.sendOutcome('dashboard_viewed');
-      localStorage.setItem('welcome_notification_sent', 'true');
-    }
-  }, [level.name]);
-
   return (
     <div className="p-6 pt-10 pb-32 animate-in fade-in duration-500 bg-[#FDFBF7] min-h-full">
       <CustomStyles/>
+      
+      {/* 🚀 EL MURO FREEMIUM VISUAL (Para preparar la monetización) */}
+      <div className="flex justify-between items-center mb-6 bg-stone-900 text-white p-3 px-5 rounded-2xl shadow-md cursor-pointer hover:bg-black transition-colors active:scale-95">
+        <div className="flex items-center gap-2">
+          <Zap size={16} className="text-yellow-400" />
+          <span className="font-bold text-sm">3/3 Magias Hoy</span>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-lg">Hazte PRO</span>
+      </div>
+
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, {profileName}!</h1>
@@ -579,28 +579,12 @@ const PantryView = ({ ingredients, setIngredients }: PantryProps) => {
     }));
   };
 
-  useEffect(() => {
-    const urgent = ingredients.filter((i: any) => i.expiryStatus === 'urgent');
-    if (urgent.length > 0 && isOneSignalInitialized) {
-      OneSignal.sendTag('has_urgent', 'true');
-      const lastNotified = localStorage.getItem('urgent_notification_time');
-      if (!lastNotified || Date.now() - parseInt(lastNotified) > 86400000) {
-        OneSignal.sendOutcome('urgent_ingredients');
-        localStorage.setItem('urgent_notification_time', Date.now().toString());
-      }
-    } else if (isOneSignalInitialized) {
-      OneSignal.sendTag('has_urgent', 'false');
-    }
-  }, [ingredients]);
-
   const PANTRY_PHRASES = [
     "Todo lo que tenemos para aprovechar.",
     "¡Vamos a darle vida a estos ingredientes!",
     "Cero desperdicio, máximo sabor.",
     "Tu lienzo en blanco culinario.",
-    "Aquí empieza la magia.",
-    "Ingredientes listos para la acción.",
-    "Cuidando el planeta desde tu nevera."
+    "Aquí empieza la magia."
   ];
   const dailyPhrase = PANTRY_PHRASES[new Date().getDay() % PANTRY_PHRASES.length];
 
@@ -853,14 +837,22 @@ interface TribeSettingsProps { profile: UserProfile; setProfile: (p: UserProfile
 const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: TribeSettingsProps) => {
   const [l, setL] = useState(profile);
   const [customAllergy, setCustomAllergy] = useState('');
+  
+  // 🚀 ESTADO INTELIGENTE DEL BOTÓN DE NOTIFICACIONES
+  const [pushGranted, setPushGranted] = useState(false);
+
+  useEffect(() => {
+    // Comprobamos si ya dio permiso en el pasado para ocultar el botón
+    if (typeof window !== 'undefined' && OneSignal && isOneSignalInitialized) {
+      setPushGranted(Notification.permission === "granted");
+    }
+  }, []);
 
   const toggleAllergy = (allergy: string) => {
     const current = Array.isArray(l.allergies) ? l.allergies : [];
     setL({
       ...l,
-      allergies: current.includes(allergy)
-        ? current.filter((a: string) => a !== allergy)
-        : [...current, allergy]
+      allergies: current.includes(allergy) ? current.filter((a: string) => a !== allergy) : [...current, allergy]
     });
   };
   
@@ -871,17 +863,17 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
     }
   };
 
-  // 🚀 EL BOTÓN MÁGICO PARA SALTAR EL MURO DE APPLE
   const requestNotifications = async () => {
     try {
       if (typeof window !== 'undefined' && OneSignal && isOneSignalInitialized) {
         await OneSignal.Slidedown.promptPush();
+        setPushGranted(Notification.permission === "granted");
       } else {
-        onAlert("Las notificaciones están bloqueadas en tu navegador actual o ya están activas.");
+        onAlert("Las notificaciones están bloqueadas en tu navegador actual. Recuerda que en iPhone debes 'Añadir a la pantalla de inicio' primero.");
       }
     } catch (error) {
       console.error(error);
-      onAlert("No se pudieron activar las notificaciones. Revisa los ajustes de tu iPhone.");
+      onAlert("No se pudieron activar las notificaciones. Revisa los ajustes de tu teléfono.");
     }
   };
 
@@ -975,12 +967,20 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
         </div>
         
         <div className="pt-4 border-t border-stone-100 space-y-3">
-          <button
-            onClick={requestNotifications}
-            className="w-full py-4 bg-teal-50 hover:bg-teal-100 text-teal-600 rounded-2xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-teal-100"
-          >
-            <Bell size={18}/> Activar Notificaciones
-          </button>
+          {/* 🚀 BOTÓN INTELIGENTE: Desaparece si ya le diste permiso */}
+          {!pushGranted ? (
+            <button
+              onClick={requestNotifications}
+              className="w-full py-4 bg-teal-50 hover:bg-teal-100 text-teal-600 rounded-2xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-teal-100 active:scale-95"
+            >
+              <Bell size={18}/> Activar Notificaciones
+            </button>
+          ) : (
+            <div className="w-full py-4 bg-stone-50 text-stone-400 rounded-2xl font-bold text-sm flex justify-center items-center gap-2 border border-stone-100">
+              <CheckCircle2 size={18} className="text-teal-500"/> Notificaciones Activadas
+            </div>
+          )}
+
           <button
             onClick={() => { setProfile(l); onClose(); }}
             className="w-full py-5 bg-stone-900 hover:bg-black text-white rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all flex justify-center items-center gap-2"
@@ -1573,7 +1573,7 @@ export default function App() {
       }
       
     } catch (err) {
-      console.error("Sincronización en segundo plano falló, usando caché:", err);
+      console.error("Sincronización en segundo plano falló:", err);
     }
     setGlobalLoading(false);
   };
