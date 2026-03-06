@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Zap
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -236,7 +236,6 @@ const CustomAlert = ({ message, onClose }: { message: string, onClose: () => voi
   );
 };
 
-// 🚀 NUEVO: COMPONENTE DE CONFIRMACIÓN (Adios al alert nativo feo)
 const CustomConfirm = ({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) => {
   if (!message) return null;
   return (
@@ -508,6 +507,7 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
   );
 };
 
+// 🚀 REFACTORIZACIÓN DASHBOARD: TEXTOS CLAROS "PARA TONTOS"
 interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; }
 const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: DashboardProps) => {
   const level = useMemo(() => {
@@ -539,7 +539,7 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
       <div className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 shadow-sm mb-6">
         <div className="flex justify-between items-end mb-3">
           <div>
-            <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">Tu Nivel</span>
+            <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">Nivel de Ahorrador</span>
             <h3 className={`text-xl font-black ${level.color} flex items-center gap-2`}>{level.icon} {level.name}</h3>
           </div>
           <span className="text-xs font-black text-stone-400 bg-stone-50 px-3 py-1.5 rounded-xl">{savings.toFixed(0)}€ / {level.next}€</span>
@@ -550,23 +550,28 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* TEXTO CAMBIADO: De "Ahorrado Total" a "Tu Ahorro Estimado" con explicación */}
         <div className="col-span-2 bg-stone-900 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-orange-400/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
-          <p className="text-stone-300 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2"><PartyPopper size={14}/> Ahorrado Total</p>
+          <p className="text-stone-300 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2"><PartyPopper size={14}/> Tu Ahorro Estimado</p>
           <div className="flex items-baseline gap-1">
             <h2 className="text-6xl font-black tracking-tighter">{savings.toFixed(0)}</h2>
             <span className="text-2xl font-bold text-orange-400">€</span>
           </div>
+          <p className="text-stone-400 text-[10px] font-bold mt-2 uppercase tracking-widest opacity-80">*Por cocinar en casa vs comer fuera</p>
         </div>
         
-        <div className="bg-teal-50 p-5 rounded-[2rem] border-2 border-teal-100 shadow-sm text-center">
-          <p className="text-teal-600 text-[10px] font-black uppercase tracking-widest mb-1">Cero Sobras</p>
+        {/* TEXTO CAMBIADO: De "Cero Sobras" a "Valor Rescatado" */}
+        <div className="bg-teal-50 p-5 rounded-[2rem] border-2 border-teal-100 shadow-sm text-center flex flex-col justify-center">
+          <p className="text-teal-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">Valor Rescatado</p>
           <h4 className="text-3xl font-black text-teal-800">{wasteSaved.toFixed(0)}€</h4>
+          <p className="text-teal-600/70 text-[9px] font-bold mt-1 uppercase tracking-widest">*Salvado de la basura</p>
         </div>
         
-        <div className="bg-orange-50 p-5 rounded-[2rem] border-2 border-orange-100 shadow-sm text-center">
-          <p className="text-orange-600 text-[10px] font-black uppercase tracking-widest mb-1">En Nevera</p>
+        <div className="bg-orange-50 p-5 rounded-[2rem] border-2 border-orange-100 shadow-sm text-center flex flex-col justify-center">
+          <p className="text-orange-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">En Nevera</p>
           <h4 className="text-3xl font-black text-orange-800">{totalItems}</h4>
+          <p className="text-orange-600/70 text-[9px] font-bold mt-1 uppercase tracking-widest">*Ingredientes listos</p>
         </div>
       </div>
     </div>
@@ -772,7 +777,6 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   );
 };
 
-// 🚀 REFACTORIZACIÓN DEL RECETARIO: Borrado individual y UX
 interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRecipe: (r: Recipe) => void; onViewRecipe: (r: Recipe) => void; }
 const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
@@ -836,7 +840,6 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
                   +{r.wasteValue}€
                 </div>
                 <div className="flex gap-2">
-                  {/* 🚀 BOTÓN INDIVIDUAL DE BORRAR RECETA */}
                   <button 
                     onClick={(e) => { e.stopPropagation(); onDeleteRecipe(r); }}
                     className="bg-rose-50 p-2 rounded-full text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
@@ -1413,7 +1416,7 @@ const RecipeDetail = ({ recipe, onBack, onCooked }: RecipeDetailProps) => {
   );
 };
 
-// 🚀 REFACTORIZADO EL COPYWRITING (Para tontos y cero fricción)
+// 🚀 REFACTORIZADO: TEXTOS CLAROS "PARA TONTOS"
 interface ConsumptionModalProps { recipe: Recipe; ingredients: Ingredient[]; onConfirm: (c: string[]) => void; onClose: () => void; }
 const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: ConsumptionModalProps) => {
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -1435,7 +1438,6 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
         <div className="w-16 h-1.5 bg-stone-200 rounded-full mx-auto mb-8"></div>
         <div className="flex justify-center mb-6"><PartyPopper size={48} className="text-orange-500 animate-wiggle"/></div>
         
-        {/* TEXTOS CLAROS Y DIRECTOS */}
         <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Magia completada!</h2>
         <p className="text-center text-stone-500 mb-8 font-medium text-base px-2">
           Has ahorrado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b>. Marca abajo lo que ya no te queda en la nevera para que lo borremos automáticamente:
@@ -1470,7 +1472,6 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
             onClick={() => onConfirm(selected)}
             className="flex-[2] py-5 bg-[#5CB82C] text-white rounded-[1.5rem] font-black shadow-lg active:scale-95 transition-transform text-sm uppercase tracking-widest flex items-center justify-center gap-2"
           >
-            {/* BOTÓN SUPER CLARO */}
             <Save size={18}/> Guardar en Recetario
           </button>
         </div>
@@ -1483,8 +1484,6 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
 export default function App() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [alertMessage, setAlertMessage] = useState(''); 
-  
-  // 🚀 ESTADO PARA EL COMPONENTE CUSTOM CONFIRM
   const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
   
   const [profile, setProfile] = useState<UserProfile>(() => {
@@ -1692,7 +1691,6 @@ export default function App() {
     }
   }, [user]);
 
-  // 🚀 LÓGICA DE BORRADO DE RECETAS INDIVIDUALES
   const handleDeleteRecipe = useCallback((recipeToDelete: Recipe) => {
     setConfirmAction({
       message: `¿Quieres borrar "${recipeToDelete.title}" de tu recetario?`,
@@ -1708,7 +1706,6 @@ export default function App() {
     });
   }, [history, user]);
 
-  // 🚀 LÓGICA DE BORRADO TOTAL (SIN ALERT NATIVO)
   const handleClearHistory = useCallback(() => {
     setConfirmAction({
       message: "¿Seguro que quieres borrar TODAS tus recetas? Tu recetario quedará vacío.",
@@ -1744,7 +1741,6 @@ export default function App() {
       const newSavings = savings + Math.max(0, (15 * profile.people) - (selectedRecipe.priceEstimate || 0));
       const newWaste = wasteSaved + (selectedRecipe.wasteValue || 0);
       
-      // Añadimos al recetario solo si no estaba ya (evitar duplicados al recocinar)
       const isAlreadyInHistory = history.some(h => h.title === selectedRecipe.title);
       let newHistory = history;
       
@@ -1777,7 +1773,7 @@ export default function App() {
       setShowConfirm(false);
       setSelectedRecipe(null);
       localStorage.removeItem('platoplan_selected_recipe');
-      navigateTo('history'); // Al guardar, los mandamos al Recetario para que vean su "Logro"
+      navigateTo('history'); 
     }
   }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo]);
 
@@ -1882,7 +1878,6 @@ export default function App() {
   return (
     <div className="h-[100dvh] bg-[#FDFBF7] flex flex-col font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden text-stone-800 selection:bg-teal-200">
       
-      {/* ALERTAS Y CONFIRMACIONES PREMIUM */}
       <CustomAlert message={alertMessage} onClose={() => setAlertMessage('')} />
       {confirmAction && (
         <CustomConfirm 
