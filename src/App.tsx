@@ -132,7 +132,7 @@ const LOADING_MESSAGES = [
   "Haciendo magia con lo que tienes..."
 ];
 
-// --- 5. LÓGICA DE IA (NUEVO ALGORITMO DE FUSIÓN MÉTRICA) ---
+// --- 5. LÓGICA DE IA ---
 const generateRealPlan = async (
   apiKey: string,
   ingredients: Ingredient[],
@@ -176,9 +176,8 @@ const generateRealPlan = async (
       2. Adapta los pasos a: ${profile.robot || 'olla/sartén'}.
       3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua o especias en la 'shopping_list'.
       4. TONO: Descripciones cálidas y amigables (Mr. Wonderful).
-      5. 🚨 REGLA DE COMPRA (SÚPER CRÍTICA): En 'shopping_list', usa SIEMPRE UNIDADES MÉTRICAS ESTÁNDAR (g o ml). ESTÁ ESTRICTAMENTE PROHIBIDO usar "ud", "unidades", "piezas", "dientes" o "manojos". 
-         Ejemplo: Si necesitas 1 cebolla, calcula su peso y pon "150 g Cebolla". Si es 1 calabacín, pon "300 g Calabacín". Si son huevos, pon "120 g Huevos". 
-         Esto es obligatorio para que el algoritmo pueda sumar cantidades idénticas. El formato debe ser estrictamente: "[Número] [g/ml] [Nombre del ingrediente]".
+      5. 🚨 REGLA DE COMPRA: En 'shopping_list', usa SIEMPRE UNIDADES MÉTRICAS ESTÁNDAR (g o ml). ESTÁ ESTRICTAMENTE PROHIBIDO usar "ud", "unidades", "piezas", "dientes" o "manojos". 
+         El formato debe ser estrictamente: "[Número] [g/ml] [Nombre del ingrediente]".
     `;
 
     if (planType === 'daily') {
@@ -232,6 +231,29 @@ const CustomAlert = ({ message, onClose }: { message: string, onClose: () => voi
         <button onClick={onClose} className="w-full py-4 bg-stone-900 hover:bg-black text-white rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-md">
           Entendido
         </button>
+      </div>
+    </div>
+  );
+};
+
+// 🚀 NUEVO: COMPONENTE DE CONFIRMACIÓN (Adios al alert nativo feo)
+const CustomConfirm = ({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) => {
+  if (!message) return null;
+  return (
+    <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-[200] animate-in fade-in">
+      <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 text-center border-2 border-stone-100">
+        <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <AlertCircle size={32} className="animate-wiggle" />
+        </div>
+        <p className="text-stone-800 font-bold text-lg mb-8 leading-relaxed">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel} className="flex-1 py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all">
+            Cancelar
+          </button>
+          <button onClick={onConfirm} className="flex-1 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-md">
+            Eliminar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -500,15 +522,6 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
   const GREETINGS = ["Hoy huele a éxito", "¡A por todas, chef!", "Tu cocina manda", "Preparando magia...", "¡Día perfecto para cocinar!", "La nevera te sonríe", "Arte en los fogones"];
   const dailyGreeting = GREETINGS[new Date().getDay() % GREETINGS.length];
 
-  useEffect(() => {
-    const hasSeenWelcome = localStorage.getItem('welcome_notification_sent');
-    if (!hasSeenWelcome && isOneSignalInitialized) {
-      OneSignal.sendTag('user_level', level.name);
-      OneSignal.sendOutcome('dashboard_viewed');
-      localStorage.setItem('welcome_notification_sent', 'true');
-    }
-  }, [level.name]);
-
   return (
     <div className="p-6 pt-10 pb-32 animate-in fade-in duration-500 bg-[#FDFBF7] min-h-full">
       <CustomStyles/>
@@ -759,8 +772,9 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   );
 };
 
-interface HistoryProps { history: Recipe[]; setHistory: (h: Recipe[]) => void; onViewRecipe: (r: Recipe) => void; }
-const HistoryView = ({ history, setHistory, onViewRecipe }: HistoryProps) => {
+// 🚀 REFACTORIZACIÓN DEL RECETARIO: Borrado individual y UX
+interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRecipe: (r: Recipe) => void; onViewRecipe: (r: Recipe) => void; }
+const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
   
@@ -773,8 +787,8 @@ const HistoryView = ({ history, setHistory, onViewRecipe }: HistoryProps) => {
         </div>
         {history.length > 0 && (
           <button
-            onClick={() => { if (confirm("¿Seguro que quieres borrar tus recetas?")) setHistory([]); }}
-            className="text-rose-400 p-3 bg-white rounded-xl shadow-sm border border-stone-100 hover:bg-rose-50 transition-colors"
+            onClick={onDeleteAll}
+            className="text-rose-400 p-3 bg-white rounded-xl shadow-sm border border-stone-100 hover:bg-rose-50 transition-colors active:scale-95"
           >
             <Trash size={20}/>
           </button>
@@ -817,12 +831,21 @@ const HistoryView = ({ history, setHistory, onViewRecipe }: HistoryProps) => {
                   <Flame size={12} className="text-orange-400"/> {r.calories} kcal
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-2">
+              <div className="flex flex-col items-end gap-3">
                 <div className="bg-teal-50 text-teal-600 font-black px-4 py-2 rounded-[1rem] text-sm shadow-sm border border-teal-100">
                   +{r.wasteValue}€
                 </div>
-                <div className="bg-stone-50 p-2 rounded-full text-stone-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
-                  <ChevronRight size={18}/>
+                <div className="flex gap-2">
+                  {/* 🚀 BOTÓN INDIVIDUAL DE BORRAR RECETA */}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onDeleteRecipe(r); }}
+                    className="bg-rose-50 p-2 rounded-full text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
+                  >
+                    <Trash2 size={18}/>
+                  </button>
+                  <div className="bg-stone-50 p-2 rounded-full text-stone-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                    <ChevronRight size={18}/>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1390,6 +1413,7 @@ const RecipeDetail = ({ recipe, onBack, onCooked }: RecipeDetailProps) => {
   );
 };
 
+// 🚀 REFACTORIZADO EL COPYWRITING (Para tontos y cero fricción)
 interface ConsumptionModalProps { recipe: Recipe; ingredients: Ingredient[]; onConfirm: (c: string[]) => void; onClose: () => void; }
 const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: ConsumptionModalProps) => {
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -1410,9 +1434,11 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
       <div className="bg-[#FDFBF7] w-full max-w-md rounded-[3rem] p-8 shadow-2xl animate-in slide-in-from-bottom-8 border-t-8 border-white">
         <div className="w-16 h-1.5 bg-stone-200 rounded-full mx-auto mb-8"></div>
         <div className="flex justify-center mb-6"><PartyPopper size={48} className="text-orange-500 animate-wiggle"/></div>
-        <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Bravísimo!</h2>
+        
+        {/* TEXTOS CLAROS Y DIRECTOS */}
+        <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Magia completada!</h2>
         <p className="text-center text-stone-500 mb-8 font-medium text-base px-2">
-          Has salvado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b> de la basura. ¿Qué ingredientes de la nevera gastaste por completo?
+          Has ahorrado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b>. Marca abajo lo que ya no te queda en la nevera para que lo borremos automáticamente:
         </p>
         
         <div className="space-y-3 mb-10 max-h-64 overflow-y-auto no-scrollbar pb-4 px-2">
@@ -1444,7 +1470,8 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
             onClick={() => onConfirm(selected)}
             className="flex-[2] py-5 bg-[#5CB82C] text-white rounded-[1.5rem] font-black shadow-lg active:scale-95 transition-transform text-sm uppercase tracking-widest flex items-center justify-center gap-2"
           >
-            <Save size={18}/> Guardar Éxito
+            {/* BOTÓN SUPER CLARO */}
+            <Save size={18}/> Guardar en Recetario
           </button>
         </div>
       </div>
@@ -1457,7 +1484,9 @@ export default function App() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [alertMessage, setAlertMessage] = useState(''); 
   
-  // 🚀 INYECCIÓN DE MEMORIA FOTOGRÁFICA EN ESTADOS
+  // 🚀 ESTADO PARA EL COMPONENTE CUSTOM CONFIRM
+  const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
+  
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
       const s = localStorage.getItem('platoplan_profile');
@@ -1488,7 +1517,6 @@ export default function App() {
     try { return JSON.parse(localStorage.getItem('platoplan_list') || '[]'); } catch (e) { return []; }
   });
   
-  // 🚀 MEMORIA FOTOGRÁFICA DE RECETAS (Evita pérdida al minimizar)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(() => {
     try { return JSON.parse(localStorage.getItem('platoplan_selected_recipe') || 'null'); } catch(e) { return null; }
   });
@@ -1504,7 +1532,6 @@ export default function App() {
   const [batchConfig, setBatchConfig] = useState<BatchConfig>({ days: 3, meals: ['lunch', 'dinner'] });
   const [showConfirm, setShowConfirm] = useState(false);
 
-  // 🚀 NAVEGADOR BLINDADO (Conecta React con el botón físico del móvil)
   const navigateTo = useCallback((newView: ViewState) => {
     localStorage.setItem('platoplan_current_view', newView);
     setView(newView);
@@ -1512,26 +1539,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Registramos la primera vista en el historial del navegador
     window.history.replaceState({ view }, '');
-
-    // Escuchamos cuando el usuario pulsa el botón FÍSICO "Atrás" en Android/iOS
     const handlePopState = (event: PopStateEvent) => {
       if (event.state && event.state.view) {
         setView(event.state.view);
         localStorage.setItem('platoplan_current_view', event.state.view);
       } else {
-        // Modo salvavidas: si falla el historial, lo llevamos a inicio pero no cerramos la app
         setView('dashboard');
         localStorage.setItem('platoplan_current_view', 'dashboard');
       }
     };
-
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // --- ARRANQUE DE SESIÓN ---
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -1559,8 +1580,6 @@ export default function App() {
     if (localProfileStr) {
       const localProfile = JSON.parse(localProfileStr);
       setProfile(localProfile);
-      
-      // Si estamos en auth, forzamos dashboard. Si ya estábamos en una receta, la respetamos.
       const currentStoredView = localStorage.getItem('platoplan_current_view') as ViewState;
       if (!currentStoredView || currentStoredView === 'auth') {
          navigateTo('dashboard');
@@ -1673,13 +1692,34 @@ export default function App() {
     }
   }, [user]);
 
-  const clearHistory = useCallback(async () => {
-    if (confirm("¿Seguro que quieres borrar tus recetas guardadas?")) {
-      setHistory([]);
-      localStorage.setItem('platoplan_history', '[]');
-      if (user) await supabase.from('history').delete().eq('user_id', user.id);
-      if (POSTHOG_KEY) posthog.capture('history_cleared');
-    }
+  // 🚀 LÓGICA DE BORRADO DE RECETAS INDIVIDUALES
+  const handleDeleteRecipe = useCallback((recipeToDelete: Recipe) => {
+    setConfirmAction({
+      message: `¿Quieres borrar "${recipeToDelete.title}" de tu recetario?`,
+      onConfirm: async () => {
+        const newHistory = history.filter(h => h.title !== recipeToDelete.title);
+        setHistory(newHistory);
+        localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+        if (user) {
+          await supabase.from('history').delete().eq('user_id', user.id).eq('title', recipeToDelete.title);
+        }
+        setConfirmAction(null);
+      }
+    });
+  }, [history, user]);
+
+  // 🚀 LÓGICA DE BORRADO TOTAL (SIN ALERT NATIVO)
+  const handleClearHistory = useCallback(() => {
+    setConfirmAction({
+      message: "¿Seguro que quieres borrar TODAS tus recetas? Tu recetario quedará vacío.",
+      onConfirm: async () => {
+        setHistory([]);
+        localStorage.setItem('platoplan_history', '[]');
+        if (user) await supabase.from('history').delete().eq('user_id', user.id);
+        if (POSTHOG_KEY) posthog.capture('history_cleared');
+        setConfirmAction(null);
+      }
+    });
   }, [user]);
 
   const generate = useCallback(async () => {
@@ -1692,7 +1732,7 @@ export default function App() {
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
       setPlan(data);
-      localStorage.setItem('platoplan_current_plan', JSON.stringify(data)); // GUARDA A FUEGO EL PLAN
+      localStorage.setItem('platoplan_current_plan', JSON.stringify(data));
     } else {
       setAlertMessage("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito.");
     }
@@ -1703,36 +1743,41 @@ export default function App() {
     if (selectedRecipe) {
       const newSavings = savings + Math.max(0, (15 * profile.people) - (selectedRecipe.priceEstimate || 0));
       const newWaste = wasteSaved + (selectedRecipe.wasteValue || 0);
-      const newHistory = [{ ...selectedRecipe, date: new Date().toLocaleDateString() }, ...history];
+      
+      // Añadimos al recetario solo si no estaba ya (evitar duplicados al recocinar)
+      const isAlreadyInHistory = history.some(h => h.title === selectedRecipe.title);
+      let newHistory = history;
+      
+      if (!isAlreadyInHistory) {
+        newHistory = [{ ...selectedRecipe, date: new Date().toLocaleDateString() }, ...history];
+        setHistory(newHistory);
+        localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+        
+        if (user) {
+          await supabase.from('history').insert({
+            user_id: user.id,
+            title: selectedRecipe.title,
+            calories: selectedRecipe.calories,
+            waste_value: selectedRecipe.wasteValue,
+            date: new Date().toLocaleDateString(),
+            recipe_data: selectedRecipe
+          });
+        }
+      }
       
       setSavings(newSavings);
       setWasteSaved(newWaste);
       localStorage.setItem('platoplan_savings', newSavings.toString());
       localStorage.setItem('platoplan_waste', newWaste.toString());
-      
-      if (user) {
-        await supabase.from('profiles').update({ savings: newSavings, waste_saved: newWaste }).eq('id', user.id);
-        await supabase.from('history').insert({
-          user_id: user.id,
-          title: selectedRecipe.title,
-          calories: selectedRecipe.calories,
-          waste_value: selectedRecipe.wasteValue,
-          date: new Date().toLocaleDateString(),
-          recipe_data: selectedRecipe
-        });
-      }
-
-      setHistory(newHistory);
-      localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+      if (user) await supabase.from('profiles').update({ savings: newSavings, waste_saved: newWaste }).eq('id', user.id);
       
       updatePantry(ingredients.filter(i => !consumed.includes(i.id)));
-      
       if (POSTHOG_KEY) posthog.capture('recipe_cooked', { recipe_title: selectedRecipe.title, waste_saved: selectedRecipe.wasteValue });
       
       setShowConfirm(false);
       setSelectedRecipe(null);
-      localStorage.removeItem('platoplan_selected_recipe'); // LIMPIA LA MEMORIA FOTOGRÁFICA
-      navigateTo('dashboard');
+      localStorage.removeItem('platoplan_selected_recipe');
+      navigateTo('history'); // Al guardar, los mandamos al Recetario para que vean su "Logro"
     }
   }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo]);
 
@@ -1837,7 +1882,15 @@ export default function App() {
   return (
     <div className="h-[100dvh] bg-[#FDFBF7] flex flex-col font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden text-stone-800 selection:bg-teal-200">
       
+      {/* ALERTAS Y CONFIRMACIONES PREMIUM */}
       <CustomAlert message={alertMessage} onClose={() => setAlertMessage('')} />
+      {confirmAction && (
+        <CustomConfirm 
+          message={confirmAction.message} 
+          onConfirm={confirmAction.onConfirm} 
+          onCancel={() => setConfirmAction(null)} 
+        />
+      )}
 
       <main className="flex-1 overflow-y-auto no-scrollbar pb-28 scroll-smooth">
         {view === 'dashboard' && (
@@ -1857,7 +1910,8 @@ export default function App() {
         {view === 'history' && (
           <HistoryView 
             history={history} 
-            setHistory={clearHistory} 
+            onDeleteAll={handleClearHistory}
+            onDeleteRecipe={handleDeleteRecipe} 
             onViewRecipe={(r: Recipe) => { 
               setSelectedRecipe(r); 
               localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r));
@@ -1870,7 +1924,7 @@ export default function App() {
             plan={plan}
             onReset={() => {
               setPlan(null);
-              localStorage.removeItem('platoplan_current_plan'); // PURGA LA MEMORIA FOTOGRÁFICA
+              localStorage.removeItem('platoplan_current_plan'); 
             }}
             loading={loading}
             loadingStartTime={loadingStartTime}
@@ -1897,7 +1951,6 @@ export default function App() {
           <RecipeDetail
             recipe={selectedRecipe}
             onBack={() => {
-              // Limpiamos la receta actual y volvemos de forma segura a donde estábamos
               localStorage.removeItem('platoplan_selected_recipe');
               const prevView = history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner';
               navigateTo(prevView);
