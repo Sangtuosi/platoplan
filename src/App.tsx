@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Zap, Bookmark
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -73,7 +73,7 @@ type ExpiryStatus = 'fresh' | 'soon' | 'urgent';
 type IngredientCat = 'veg' | 'protein' | 'dairy' | 'pantry';
 
 interface Ingredient { id: string; name: string; quantity: string; expiryStatus: ExpiryStatus; category: IngredientCat; }
-interface Recipe { title: string; description: string; time: string; calories: number; ingredients: string[]; steps: string[]; priceEstimate: number; wasteValue: number; date?: string; }
+interface Recipe { id?: string; title: string; description: string; time: string; calories: number; ingredients: string[]; steps: string[]; priceEstimate: number; wasteValue: number; date?: string; }
 interface BatchMasterclass { intro: string; storage_tips: string[]; step_by_step: { phase: string; tasks: string[] }[]; }
 interface MealPlan { type: 'daily' | 'batch'; lunch?: Recipe; lunch_alt?: Recipe; dinner?: Recipe; dinner_alt?: Recipe; days?: { day: number; lunch: Recipe; dinner: Recipe }[]; batch_masterclass?: BatchMasterclass; shopping_list?: string[]; }
 interface UserProfile { name: string; style: string; allergies: string[]; people: number; ages: string; robot: string; }
@@ -507,9 +507,8 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
   );
 };
 
-// 🚀 REFACTORIZACIÓN DASHBOARD: TEXTOS CLAROS "PARA TONTOS"
-interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; }
-const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: DashboardProps) => {
+interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; }
+const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry }: DashboardProps) => {
   const level = useMemo(() => {
     if (savings < 30) return { name: "Pinche con Arte", icon: "🌱", color: "text-stone-500", next: 30 };
     if (savings < 100) return { name: "Chef Saleroso", icon: "👨‍🍳", color: "text-teal-500", next: 100 };
@@ -526,6 +525,20 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
     <div className="p-6 pt-10 pb-32 animate-in fade-in duration-500 bg-[#FDFBF7] min-h-full">
       <CustomStyles/>
       
+      {/* 🚀 NUEVO BANNER DE ALERTA ROJA SOS (Sustituto infalible de las notificaciones) */}
+      {urgentCount > 0 && (
+        <div 
+          onClick={onViewPantry}
+          className="bg-rose-500 text-white p-5 rounded-2xl mb-6 shadow-lg flex items-center gap-4 cursor-pointer active:scale-95 transition-transform animate-in slide-in-from-top-4"
+        >
+          <AlertCircle size={32} className="animate-pulse flex-shrink-0" />
+          <div>
+            <p className="font-black text-lg leading-tight mb-1">¡Alerta en tu nevera!</p>
+            <p className="text-sm font-medium text-rose-100">Tienes {urgentCount} ingrediente(s) a punto de caducar. ¡Sálvalos ya!</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, {profileName}!</h1>
@@ -550,7 +563,6 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* TEXTO CAMBIADO: De "Ahorrado Total" a "Tu Ahorro Estimado" con explicación */}
         <div className="col-span-2 bg-stone-900 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-orange-400/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
           <p className="text-stone-300 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2"><PartyPopper size={14}/> Tu Ahorro Estimado</p>
@@ -561,7 +573,6 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName }: Dashboa
           <p className="text-stone-400 text-[10px] font-bold mt-2 uppercase tracking-widest opacity-80">*Por cocinar en casa vs comer fuera</p>
         </div>
         
-        {/* TEXTO CAMBIADO: De "Cero Sobras" a "Valor Rescatado" */}
         <div className="bg-teal-50 p-5 rounded-[2rem] border-2 border-teal-100 shadow-sm text-center flex flex-col justify-center">
           <p className="text-teal-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">Valor Rescatado</p>
           <h4 className="text-3xl font-black text-teal-800">{wasteSaved.toFixed(0)}€</h4>
@@ -777,7 +788,7 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   );
 };
 
-interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRecipe: (r: Recipe) => void; onViewRecipe: (r: Recipe) => void; }
+interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRecipe: (index: number) => void; onViewRecipe: (r: Recipe) => void; }
 const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
@@ -821,38 +832,42 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r: any, i: number) => (
-            <div
-              key={i}
-              onClick={() => onViewRecipe(r)}
-              className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 shadow-sm flex justify-between items-center hover:shadow-md transition-all group animate-fade-slide cursor-pointer hover:border-teal-200"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className="flex-1 pr-4">
-                <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">{r.date || 'Reciente'}</span>
-                <h3 className="text-lg font-black text-stone-800 leading-tight mb-2 group-hover:text-teal-600 transition-colors">{r.title}</h3>
-                <p className="text-xs text-stone-400 font-bold flex items-center gap-1">
-                  <Flame size={12} className="text-orange-400"/> {r.calories} kcal
-                </p>
-              </div>
-              <div className="flex flex-col items-end gap-3">
-                <div className="bg-teal-50 text-teal-600 font-black px-4 py-2 rounded-[1rem] text-sm shadow-sm border border-teal-100">
-                  +{r.wasteValue}€
+          {filtered.map((r: any, i: number) => {
+            // Buscamos el índice real en el history original para borrarlo con precisión
+            const realIndex = history.findIndex(h => h.id === r.id || (h.title === r.title && h.date === r.date));
+            return (
+              <div
+                key={r.id || i}
+                onClick={() => onViewRecipe(r)}
+                className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 shadow-sm flex justify-between items-center hover:shadow-md transition-all group animate-fade-slide cursor-pointer hover:border-teal-200"
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <div className="flex-1 pr-4">
+                  <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">{r.date || 'Reciente'}</span>
+                  <h3 className="text-lg font-black text-stone-800 leading-tight mb-2 group-hover:text-teal-600 transition-colors">{r.title}</h3>
+                  <p className="text-xs text-stone-400 font-bold flex items-center gap-1">
+                    <Flame size={12} className="text-orange-400"/> {r.calories} kcal
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onDeleteRecipe(r); }}
-                    className="bg-rose-50 p-2 rounded-full text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
-                  >
-                    <Trash2 size={18}/>
-                  </button>
-                  <div className="bg-stone-50 p-2 rounded-full text-stone-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
-                    <ChevronRight size={18}/>
+                <div className="flex flex-col items-end gap-3">
+                  <div className="bg-teal-50 text-teal-600 font-black px-4 py-2 rounded-[1rem] text-sm shadow-sm border border-teal-100">
+                    +{r.wasteValue}€
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onDeleteRecipe(realIndex); }}
+                      className="bg-rose-50 p-2 rounded-full text-rose-400 hover:bg-rose-500 hover:text-white transition-colors"
+                    >
+                      <Trash2 size={18}/>
+                    </button>
+                    <div className="bg-stone-50 p-2 rounded-full text-stone-300 group-hover:bg-teal-50 group-hover:text-teal-500 transition-colors">
+                      <ChevronRight size={18}/>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1339,8 +1354,9 @@ const PlannerView = ({
   );
 };
 
-interface RecipeDetailProps { recipe: Recipe; onBack: () => void; onCooked: () => void; }
-const RecipeDetail = ({ recipe, onBack, onCooked }: RecipeDetailProps) => {
+// 🚀 REFACTORIZADA: VISTA DE RECETA CON BOTÓN DE COMPARTIR Y GUARDAR INDEPENDIENTE
+interface RecipeDetailProps { recipe: Recipe; onBack: () => void; onCooked: () => void; onSave: () => void; isSaved: boolean; onAlert: (m:string)=>void; }
+const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: RecipeDetailProps) => {
   const safeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const safeSteps = Array.isArray(recipe?.steps) ? recipe.steps : [];
 
@@ -1348,11 +1364,39 @@ const RecipeDetail = ({ recipe, onBack, onCooked }: RecipeDetailProps) => {
     if (POSTHOG_KEY) posthog.capture('recipe_viewed', { title: recipe?.title });
   }, [recipe]);
 
+  const shareRecipe = () => {
+    const ingText = safeIngredients.map(i => `• ${typeof i === 'string' ? i : (i as any).name}`).join('\n');
+    const stepText = safeSteps.map((s, i) => `${i+1}. ${s}`).join('\n\n');
+    const txt = `👨‍🍳 PlatoPlan: ${recipe.title}\n\nIngredientes:\n${ingText}\n\nElaboración:\n${stepText}`;
+    
+    if (navigator.share) {
+      navigator.share({ title: recipe.title, text: txt }).catch(console.error);
+    } else {
+      const dummy = document.createElement("textarea");
+      document.body.appendChild(dummy);
+      dummy.value = txt;
+      dummy.select();
+      document.execCommand("copy");
+      document.body.removeChild(dummy);
+      onAlert("¡Receta copiada al portapapeles!");
+    }
+  };
+
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-screen animate-in slide-in-from-right duration-300 relative z-50">
-      <button onClick={onBack} className="mb-8 bg-white p-4 rounded-full shadow-md border-2 border-stone-100 hover:bg-stone-50 transition-colors active:scale-90">
-        <ArrowLeft size={24} className="text-stone-600"/>
-      </button>
+      <div className="flex justify-between items-center mb-8">
+        <button onClick={onBack} className="bg-white p-4 rounded-full shadow-md border-2 border-stone-100 hover:bg-stone-50 transition-colors active:scale-90">
+          <ArrowLeft size={24} className="text-stone-600"/>
+        </button>
+        <div className="flex gap-3">
+          <button onClick={shareRecipe} className="bg-white p-4 rounded-full shadow-md border-2 border-stone-100 hover:bg-stone-50 transition-colors active:scale-90 text-stone-600">
+            <Share2 size={24}/>
+          </button>
+          <button onClick={onSave} className={`p-4 rounded-full shadow-md border-2 transition-colors active:scale-90 ${isSaved ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-white border-stone-100 text-stone-600 hover:bg-stone-50'}`}>
+            <Bookmark size={24} fill={isSaved ? "currentColor" : "none"}/>
+          </button>
+        </div>
+      </div>
       
       <h1 className="text-4xl font-black mb-6 leading-tight text-stone-900 tracking-tighter">{recipe?.title}</h1>
       
@@ -1410,13 +1454,13 @@ const RecipeDetail = ({ recipe, onBack, onCooked }: RecipeDetailProps) => {
         className="w-full py-6 bg-stone-900 text-white rounded-[2rem] font-black text-xl shadow-xl hover:bg-black active:scale-95 transition-all flex justify-center gap-3 items-center border-4 border-stone-800 animate-fade-slide"
         style={{ animationDelay: '200ms' }}
       >
-        <CheckCircle2 size={28}/> ¡PLATO TERMINADO!
+        <CheckCircle2 size={28}/> ¡He cocinado esto!
       </button>
     </div>
   );
 };
 
-// 🚀 REFACTORIZADO: TEXTOS CLAROS "PARA TONTOS"
+// 🚀 REFACTORIZADO: CHECKBOXES DESMARCADOS POR DEFECTO Y TEXTO DIRECTO
 interface ConsumptionModalProps { recipe: Recipe; ingredients: Ingredient[]; onConfirm: (c: string[]) => void; onClose: () => void; }
 const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: ConsumptionModalProps) => {
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -1429,7 +1473,8 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
     return match.length > 0 ? match : ingredients;
   }, [recipe, ingredients]);
 
-  const [selected, setSelected] = useState<string[]>(relevant.map((i: any) => i.id));
+  // EMPIEZAN VACÍOS PARA EVITAR BORRADOS ACCIDENTALES
+  const [selected, setSelected] = useState<string[]>([]);
   const toggle = (id: string) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   return (
@@ -1438,9 +1483,9 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
         <div className="w-16 h-1.5 bg-stone-200 rounded-full mx-auto mb-8"></div>
         <div className="flex justify-center mb-6"><PartyPopper size={48} className="text-orange-500 animate-wiggle"/></div>
         
-        <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Magia completada!</h2>
+        <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Plato terminado!</h2>
         <p className="text-center text-stone-500 mb-8 font-medium text-base px-2">
-          Has ahorrado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b>. Marca abajo lo que ya no te queda en la nevera para que lo borremos automáticamente:
+          ¡A comer! Marca abajo los ingredientes que te has <b>terminado por completo</b> para borrarlos de tu nevera. Si te sobra, déjalos desmarcados.
         </p>
         
         <div className="space-y-3 mb-10 max-h-64 overflow-y-auto no-scrollbar pb-4 px-2">
@@ -1451,7 +1496,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
               className={`flex items-center gap-4 p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer ${
                 selected.includes(ing.id)
                   ? 'bg-white border-teal-400 shadow-md transform scale-[1.02]'
-                  : 'bg-stone-50 border-stone-200 opacity-60'
+                  : 'bg-stone-50 border-stone-200 opacity-80 hover:bg-stone-100'
               }`}
             >
               <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${
@@ -1459,7 +1504,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
               }`}>
                 {selected.includes(ing.id) && <Check size={16} className="text-white" strokeWidth={3}/>}
               </div>
-              <span className={`font-black text-lg ${selected.includes(ing.id) ? 'text-stone-800' : 'text-stone-400'}`}>{ing.name}</span>
+              <span className={`font-black text-lg ${selected.includes(ing.id) ? 'text-stone-800' : 'text-stone-500'}`}>{ing.name}</span>
             </div>
           ))}
         </div>
@@ -1472,7 +1517,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
             onClick={() => onConfirm(selected)}
             className="flex-[2] py-5 bg-[#5CB82C] text-white rounded-[1.5rem] font-black shadow-lg active:scale-95 transition-transform text-sm uppercase tracking-widest flex items-center justify-center gap-2"
           >
-            <Save size={18}/> Guardar en Recetario
+            <CheckCircle2 size={18}/> Aceptar
           </button>
         </div>
       </div>
@@ -1620,7 +1665,7 @@ export default function App() {
       }
 
       if (i && i.length > 0) setIngredients(i.map((x: any) => ({ ...x, expiryStatus: x.expiry_status })));
-      if (h && h.length > 0) setHistory(h.map((x: any) => ({ ...x.recipe_data, date: x.date })));
+      if (h && h.length > 0) setHistory(h.map((x: any) => ({ ...x.recipe_data, date: x.date, id: x.recipe_data.id || Date.now().toString() })));
       if (l && l.length > 0) setShoppingList(l);
       
       if (POSTHOG_KEY && typeof posthog !== 'undefined' && posthog.identify) {
@@ -1691,15 +1736,52 @@ export default function App() {
     }
   }, [user]);
 
-  const handleDeleteRecipe = useCallback((recipeToDelete: Recipe) => {
+  // 🚀 NUEVA LÓGICA: GUARDAR RECETA INDEPENDIENTE DE SI SE COCINA O NO
+  const handleSaveRecipe = async (recipeToSave: Recipe) => {
+    const safeId = recipeToSave.id || Date.now().toString();
+    const isAlreadyInHistory = history.some(h => h.id === safeId || (h.title === recipeToSave.title && h.date === new Date().toLocaleDateString()));
+    
+    if (!isAlreadyInHistory) {
+      const recipeWithId = { ...recipeToSave, id: safeId, date: new Date().toLocaleDateString() };
+      const newHistory = [recipeWithId, ...history];
+      setHistory(newHistory);
+      localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+
+      if (user) {
+        await supabase.from('history').insert({
+          user_id: user.id,
+          title: recipeWithId.title,
+          calories: recipeWithId.calories,
+          waste_value: recipeWithId.wasteValue,
+          date: recipeWithId.date,
+          recipe_data: recipeWithId
+        });
+      }
+      setAlertMessage("¡Receta guardada en tu recetario para luego!");
+      if (POSTHOG_KEY) posthog.capture('recipe_bookmarked', { title: recipeToSave.title });
+    } else {
+      setAlertMessage("Esta receta ya la tienes guardada en tu recetario.");
+    }
+  };
+
+  // 🚀 LÓGICA DE BORRADO DE RECETAS INDIVIDUALES POR ÍNDICE EXACTO (Evita borrar duplicados)
+  const handleDeleteRecipe = useCallback((indexToDelete: number) => {
+    const recipe = history[indexToDelete];
+    if (!recipe) return;
+
     setConfirmAction({
-      message: `¿Quieres borrar "${recipeToDelete.title}" de tu recetario?`,
+      message: `¿Quieres borrar "${recipe.title}" de tu recetario?`,
       onConfirm: async () => {
-        const newHistory = history.filter(h => h.title !== recipeToDelete.title);
+        const newHistory = history.filter((_, i) => i !== indexToDelete);
         setHistory(newHistory);
         localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
         if (user) {
-          await supabase.from('history').delete().eq('user_id', user.id).eq('title', recipeToDelete.title);
+          // Si tiene ID lo usamos, si no, intentamos borrar por título asumiendo el riesgo
+          if (recipe.id) {
+            await supabase.from('history').delete().eq('user_id', user.id).eq('recipe_data->>id', recipe.id);
+          } else {
+            await supabase.from('history').delete().eq('user_id', user.id).eq('title', recipe.title);
+          }
         }
         setConfirmAction(null);
       }
@@ -1728,6 +1810,12 @@ export default function App() {
     
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
+      // Inyectamos IDs únicos a las recetas generadas
+      if (data.lunch) data.lunch.id = Date.now().toString() + "-L";
+      if (data.dinner) data.dinner.id = Date.now().toString() + "-D";
+      if (data.lunch_alt) data.lunch_alt.id = Date.now().toString() + "-LA";
+      if (data.dinner_alt) data.dinner_alt.id = Date.now().toString() + "-DA";
+      
       setPlan(data);
       localStorage.setItem('platoplan_current_plan', JSON.stringify(data));
     } else {
@@ -1741,26 +1829,6 @@ export default function App() {
       const newSavings = savings + Math.max(0, (15 * profile.people) - (selectedRecipe.priceEstimate || 0));
       const newWaste = wasteSaved + (selectedRecipe.wasteValue || 0);
       
-      const isAlreadyInHistory = history.some(h => h.title === selectedRecipe.title);
-      let newHistory = history;
-      
-      if (!isAlreadyInHistory) {
-        newHistory = [{ ...selectedRecipe, date: new Date().toLocaleDateString() }, ...history];
-        setHistory(newHistory);
-        localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
-        
-        if (user) {
-          await supabase.from('history').insert({
-            user_id: user.id,
-            title: selectedRecipe.title,
-            calories: selectedRecipe.calories,
-            waste_value: selectedRecipe.wasteValue,
-            date: new Date().toLocaleDateString(),
-            recipe_data: selectedRecipe
-          });
-        }
-      }
-      
       setSavings(newSavings);
       setWasteSaved(newWaste);
       localStorage.setItem('platoplan_savings', newSavings.toString());
@@ -1771,9 +1839,32 @@ export default function App() {
       if (POSTHOG_KEY) posthog.capture('recipe_cooked', { recipe_title: selectedRecipe.title, waste_saved: selectedRecipe.wasteValue });
       
       setShowConfirm(false);
+      
+      // La guardamos automáticamente al cocinarla si no estaba ya
+      const safeId = selectedRecipe.id || Date.now().toString();
+      const isAlreadyInHistory = history.some(h => h.id === safeId || (h.title === selectedRecipe.title && h.date === new Date().toLocaleDateString()));
+      
+      if (!isAlreadyInHistory) {
+        const recipeWithId = { ...selectedRecipe, id: safeId, date: new Date().toLocaleDateString() };
+        const newHistory = [recipeWithId, ...history];
+        setHistory(newHistory);
+        localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+        if (user) {
+          await supabase.from('history').insert({
+            user_id: user.id,
+            title: recipeWithId.title,
+            calories: recipeWithId.calories,
+            waste_value: recipeWithId.wasteValue,
+            date: recipeWithId.date,
+            recipe_data: recipeWithId
+          });
+        }
+      }
+
       setSelectedRecipe(null);
       localStorage.removeItem('platoplan_selected_recipe');
-      navigateTo('history'); 
+      setAlertMessage("¡Hecho! Hemos sumado tu ahorro al Panel de Inicio.");
+      navigateTo('dashboard'); 
     }
   }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo]);
 
@@ -1875,6 +1966,8 @@ export default function App() {
     />
   );
 
+  const urgentCount = ingredients.filter(i => i.expiryStatus === 'urgent').length;
+
   return (
     <div className="h-[100dvh] bg-[#FDFBF7] flex flex-col font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden text-stone-800 selection:bg-teal-200">
       
@@ -1894,6 +1987,8 @@ export default function App() {
             wasteSaved={wasteSaved}
             totalItems={ingredients.length}
             profileName={profile.name}
+            urgentCount={urgentCount}
+            onViewPantry={() => navigateTo('pantry')}
           />
         )}
         {view === 'pantry' && (
@@ -1947,10 +2042,13 @@ export default function App() {
             recipe={selectedRecipe}
             onBack={() => {
               localStorage.removeItem('platoplan_selected_recipe');
-              const prevView = history.some(h => h.title === selectedRecipe.title) ? 'history' : 'planner';
+              const prevView = history.some(h => h.id === selectedRecipe.id || h.title === selectedRecipe.title) ? 'history' : 'planner';
               navigateTo(prevView);
             }} 
             onCooked={() => setShowConfirm(true)}
+            onSave={() => handleSaveRecipe(selectedRecipe)}
+            isSaved={history.some(h => h.id === selectedRecipe.id || h.title === selectedRecipe.title)}
+            onAlert={setAlertMessage}
           />
         )}
       </main>
