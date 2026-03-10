@@ -119,17 +119,14 @@ const ROBOT_OPTIONS = [
   'Olla lenta'
 ];
 
+// 🚀 ARRAYS DE TEXTOS DINÁMICOS
 const LOADING_MESSAGES = [
-  "Afilando los cuchillos virtuales...",
-  "Consultando el libro secreto de la abuela...",
-  "Precalentando el horno a tope...",
-  "Calculando cantidades exactas...",
-  "Organizando tus comidas de la semana...",
-  "Revisando tu lista de la compra...",
-  "Emplatando virtualmente...",
-  "Preguntando a los ingredientes qué quieren ser de mayores...",
-  "Dándole un toque de amor a cada receta...",
-  "Haciendo magia con lo que tienes..."
+  "Afilando los cuchillos virtuales... 🔪",
+  "Consultando el libro secreto de la abuela... 📖",
+  "Precalentando el horno a tope... 🔥",
+  "Dándole un toque de amor a la receta... ❤️",
+  "Preguntando a los ingredientes qué quieren ser de mayores... 🍅",
+  "Haciendo magia con lo que tienes... ✨"
 ];
 
 // --- 5. LÓGICA DE IA ---
@@ -175,8 +172,8 @@ const generateRealPlan = async (
       1. GRAMOS EXACTOS. Adapta todo para ${profile.people} personas (${profile.ages}).
       2. Adapta los pasos a: ${profile.robot || 'olla/sartén'}.
       3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua o especias en la 'shopping_list'.
-      4. TONO: Descripciones cálidas y amigables (Mr. Wonderful).
-      5. 🚨 REGLA DE COMPRA: En 'shopping_list', usa SIEMPRE UNIDADES MÉTRICAS ESTÁNDAR (g o ml). ESTÁ ESTRICTAMENTE PROHIBIDO usar "ud", "unidades", "piezas", "dientes" o "manojos". 
+      4. TONO: Descripciones muy creativas, divertidas, emocionantes y muy cálidas, como si un chef famoso te estuviera animando.
+      5. REGLA DE COMPRA: En 'shopping_list', usa SIEMPRE UNIDADES MÉTRICAS ESTÁNDAR (g o ml). ESTÁ ESTRICTAMENTE PROHIBIDO usar "ud", "unidades", "piezas". 
          El formato debe ser estrictamente: "[Número] [g/ml] [Nombre del ingrediente]".
     `;
 
@@ -225,11 +222,11 @@ const CustomAlert = ({ message, onClose }: { message: string, onClose: () => voi
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-[200] animate-in fade-in">
       <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 text-center border-2 border-stone-100">
         <div className="w-16 h-16 bg-teal-50 text-teal-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-          <AlertCircle size={32} className="animate-wiggle" />
+          <Sparkles size={32} className="animate-wiggle" />
         </div>
         <p className="text-stone-800 font-bold text-lg mb-8 leading-relaxed">{message}</p>
         <button onClick={onClose} className="w-full py-4 bg-stone-900 hover:bg-black text-white rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-md">
-          Entendido
+          ¡Oído Cocina!
         </button>
       </div>
     </div>
@@ -242,12 +239,12 @@ const CustomConfirm = ({ message, onConfirm, onCancel }: { message: string, onCo
     <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-[200] animate-in fade-in">
       <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 text-center border-2 border-stone-100">
         <div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-          <AlertCircle size={32} className="animate-wiggle" />
+          <Trash2 size={32} className="animate-wiggle" />
         </div>
         <p className="text-stone-800 font-bold text-lg mb-8 leading-relaxed">{message}</p>
         <div className="flex gap-3">
           <button onClick={onCancel} className="flex-1 py-4 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all">
-            Cancelar
+            Mejor no
           </button>
           <button onClick={onConfirm} className="flex-1 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all shadow-md">
             Eliminar
@@ -294,7 +291,7 @@ const PsychologicalLoader = ({ startTime }: { startTime: number }) => {
       <h3 className="text-xl font-black text-stone-800 mb-2 px-6 h-14 flex items-center justify-center animate-fade-slide" key={msgIdx}>
         {LOADING_MESSAGES[msgIdx]}
       </h3>
-      <p className="text-stone-400 font-medium mb-10">La magia requiere su tiempo...</p>
+      <p className="text-stone-400 font-medium mb-10">La buena cocina requiere su tiempo...</p>
       
       <div className="w-3/4 mx-auto bg-stone-100 h-4 rounded-full overflow-hidden shadow-inner relative">
         <div className="absolute top-0 left-0 h-full bg-teal-500 rounded-full transition-all duration-300 ease-out progress-bar-stripes" style={{width: `${Math.min(progress, 98)}%`}}></div>
@@ -314,18 +311,18 @@ const AuthView = ({ onAlert }: AuthViewProps) => {
   const [isSignUp, setIsSignUp] = useState(false);
 
   const handleAuth = async () => {
-    if (!email || !password) return onAlert("Por favor, rellena todos los campos.");
+    if (!email || !password) return onAlert("¡Ey! Faltan datos para entrar a tu cocina secreta. 🤫");
     setLoading(true);
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (error) onAlert(error.message);
+      if (error) onAlert("Mmm, algo falló: " + error.message);
       else {
         if (POSTHOG_KEY) posthog.capture('user_signed_up');
-        onAlert("¡Cuenta creada! Ya puedes iniciar sesión.");
+        onAlert("¡Cuenta creada! Ya puedes iniciar sesión y empezar la magia. ✨");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) onAlert("Error al iniciar sesión: " + error.message);
+      if (error) onAlert("No reconocemos esa llave. Revisa tu email y contraseña. 🔑");
       else if (POSTHOG_KEY) posthog.capture('user_logged_in');
     }
     setLoading(false);
@@ -340,7 +337,7 @@ const AuthView = ({ onAlert }: AuthViewProps) => {
             <ChefHat className="text-teal-600 animate-wiggle" size={60}/>
           </div>
           <h1 className="text-4xl font-black text-stone-800 mb-2 tracking-tight">PlatoPlan</h1>
-          <p className="text-stone-500 font-medium text-lg">Tu cocina inteligente empieza aquí.</p>
+          <p className="text-stone-500 font-medium text-lg">Tu asistente de cocina personal. 🧑‍🍳</p>
         </div>
         
         <div className="space-y-4">
@@ -363,11 +360,11 @@ const AuthView = ({ onAlert }: AuthViewProps) => {
             disabled={loading} 
             className="w-full py-5 bg-stone-900 text-white rounded-2xl font-black text-xl shadow-xl active:scale-95 transition-all mt-4 flex justify-center items-center h-16 hover:bg-black"
           >
-            {loading ? <Loader2 className="animate-spin" size={24}/> : (isSignUp ? 'Unirse a la tribu' : 'Entrar a la cocina')}
+            {loading ? <Loader2 className="animate-spin" size={24}/> : (isSignUp ? 'Unirse a la tribu ✨' : 'Entrar a la cocina 🍳')}
           </button>
           
           <p onClick={() => setIsSignUp(!isSignUp)} className="text-center text-stone-400 font-bold text-sm cursor-pointer mt-6 hover:text-stone-600 transition-colors">
-            {isSignUp ? '¿Ya tienes cuenta? Inicia sesión' : '¿Eres nuevo? Crea tu cuenta gratis'}
+            {isSignUp ? '¿Ya tienes cuenta? Inicia sesión aquí 👇' : '¿Eres nuevo? Crea tu cuenta gratis 🎁'}
           </p>
         </div>
       </div>
@@ -381,9 +378,9 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
   const [customAllergy, setCustomAllergy] = useState('');
   
   const INTRO_SLIDES = [
-    { title: "Planificación a tu medida", text: "Elige tus comidas en minutos. Con opciones ilimitadas, come exactamente como quieres.", icon: <BookOpen size={80} className="text-stone-700"/>, color: "bg-teal-100" },
-    { title: "Compra sin estrés", text: "Haz la compra una vez a la semana con una lista organizada automáticamente.", icon: <ShoppingBag size={80} className="text-stone-700"/>, color: "bg-orange-100" },
-    { title: "Zero Waste Real", text: "Dile a la app qué tienes a punto de caducar y crearemos magia para no tirar nada.", icon: <Leaf size={80} className="text-stone-700"/>, color: "bg-rose-100" }
+    { title: "Planificación a tu medida", text: "Dinos cuántos sois y qué os gusta. Nosotros nos encargamos del resto.", icon: <BookOpen size={80} className="text-stone-700"/>, color: "bg-teal-100" },
+    { title: "Compra sin estrés", text: "Haz la compra una vez a la semana con una lista generada mágicamente.", icon: <ShoppingBag size={80} className="text-stone-700"/>, color: "bg-orange-100" },
+    { title: "Magia Anti-Sobras", text: "Apunta qué tienes a punto de caducar en la nevera y crearemos un platazo de la nada.", icon: <Leaf size={80} className="text-stone-700"/>, color: "bg-rose-100" }
   ];
 
   const toggleDislike = (item: string) => {
@@ -429,14 +426,14 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
               ))}
             </div>
             <button onClick={() => setStep(step + 1)} className="w-full py-5 bg-[#5CB82C] text-white rounded-[1rem] font-bold text-lg shadow-md active:scale-95 transition-transform hover:bg-[#4a9c22]">
-              Continuar
+              ¡Suena genial!
             </button>
           </div>
         )}
 
         {step === 3 && (
           <div className="animate-in slide-in-from-right-8 duration-500 pb-10 flex flex-col h-full mt-4">
-            <h2 className="text-4xl font-black mb-8">Elige tu dieta</h2>
+            <h2 className="text-4xl font-black mb-8">¿Cómo os gusta comer? 🥗</h2>
             <div className="flex-1 space-y-3 overflow-y-auto no-scrollbar pb-4">
               {DIET_OPTIONS.map(diet => {
                 const isSel = profile.style === diet.id;
@@ -463,7 +460,7 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
         {step === 4 && (
           <div className="animate-in slide-in-from-right-8 duration-500 flex flex-col h-full pb-10 mt-4">
             <div className="flex justify-between items-end mb-6">
-              <h2 className="text-4xl font-black leading-tight">¿Algo que<br/>evitar?</h2>
+              <h2 className="text-4xl font-black leading-tight">¿Algo que debamos evitar? 🚫</h2>
             </div>
             
             <div className="flex gap-2 mb-6">
@@ -498,7 +495,7 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
               </div>
             </div>
             <button onClick={() => onComplete()} className="w-full py-5 bg-stone-900 text-white rounded-[1rem] font-black text-xl shadow-xl active:scale-95 transition-transform mt-6 hover:bg-black">
-              ¡Comenzar a Cocinar!
+              ¡Que empiece la Magia! ✨
             </button>
           </div>
         )}
@@ -510,22 +507,31 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
 interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; }
 const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry }: DashboardProps) => {
   const level = useMemo(() => {
-    if (savings < 30) return { name: "Pinche con Arte", icon: "🌱", color: "text-stone-500", next: 30 };
-    if (savings < 100) return { name: "Chef Saleroso", icon: "👨‍🍳", color: "text-teal-500", next: 100 };
+    if (savings < 30) return { name: "Pinche Aprendiz", icon: "🌱", color: "text-stone-500", next: 30 };
+    if (savings < 100) return { name: "Chef con Arte", icon: "👨‍🍳", color: "text-teal-500", next: 100 };
     if (savings < 250) return { name: "Héroe del Tupper", icon: "🍱", color: "text-blue-500", next: 250 };
     return { name: "Estrella Michelin", icon: "⭐", color: "text-amber-500", next: 1000 };
   }, [savings]);
   
   const progress = Math.min(100, (savings / level.next) * 100);
 
-  const GREETINGS = ["Hoy huele a éxito", "¡A por todas, chef!", "Tu cocina manda", "Preparando magia...", "¡Día perfecto para cocinar!", "La nevera te sonríe", "Arte en los fogones"];
-  const dailyGreeting = GREETINGS[new Date().getDay() % GREETINGS.length];
+  // 🚀 FRASES ALEATORIAS CADA VEZ QUE ENTRAS (useMemo con Math.random)
+  const greetings = ["¡Hoy huele a éxito, Chef! ✨", "¡A por todas en la cocina! 🍳", "La nevera te estaba esperando 🧊", "¡Preparando varitas mágicas! 🪄", "¡Día perfecto para una obra de arte! 🎨", "Tu cocina manda, tú decides 👑"];
+  const randomGreeting = useMemo(() => greetings[Math.floor(Math.random() * greetings.length)], []);
+
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem('welcome_notification_sent');
+    if (!hasSeenWelcome && isOneSignalInitialized) {
+      OneSignal.sendTag('user_level', level.name);
+      OneSignal.sendOutcome('dashboard_viewed');
+      localStorage.setItem('welcome_notification_sent', 'true');
+    }
+  }, [level.name]);
 
   return (
     <div className="p-6 pt-10 pb-32 animate-in fade-in duration-500 bg-[#FDFBF7] min-h-full">
       <CustomStyles/>
       
-      {/* 🚀 NUEVO BANNER DE ALERTA ROJA SOS (Sustituto infalible de las notificaciones) */}
       {urgentCount > 0 && (
         <div 
           onClick={onViewPantry}
@@ -533,16 +539,16 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
         >
           <AlertCircle size={32} className="animate-pulse flex-shrink-0" />
           <div>
-            <p className="font-black text-lg leading-tight mb-1">¡Alerta en tu nevera!</p>
-            <p className="text-sm font-medium text-rose-100">Tienes {urgentCount} ingrediente(s) a punto de caducar. ¡Sálvalos ya!</p>
+            <p className="font-black text-lg leading-tight mb-1">¡Alarma en la nevera! 🚨</p>
+            <p className="text-sm font-medium text-rose-100">Tienes {urgentCount} ingrediente(s) tristes a punto de caducar. ¡Sálvalos ya!</p>
           </div>
         </div>
       )}
 
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, {profileName}!</h1>
-          <p className="text-stone-400 text-sm font-bold mt-1">{dailyGreeting}</p>
+          <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, {profileName}! 👋</h1>
+          <p className="text-stone-400 text-sm font-bold mt-1">{randomGreeting}</p>
         </div>
         <div className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100">
           <ChefHat className="text-teal-500 animate-wiggle" size={24} />
@@ -552,7 +558,7 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
       <div className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 shadow-sm mb-6">
         <div className="flex justify-between items-end mb-3">
           <div>
-            <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">Nivel de Ahorrador</span>
+            <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">Tu Nivel Culinario</span>
             <h3 className={`text-xl font-black ${level.color} flex items-center gap-2`}>{level.icon} {level.name}</h3>
           </div>
           <span className="text-xs font-black text-stone-400 bg-stone-50 px-3 py-1.5 rounded-xl">{savings.toFixed(0)}€ / {level.next}€</span>
@@ -563,26 +569,27 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
       </div>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* TEXTO CAMBIADO: Vuelve el buen rollo pero claro */}
         <div className="col-span-2 bg-stone-900 p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-48 h-48 bg-orange-400/20 rounded-full blur-3xl -mr-10 -mt-10"></div>
-          <p className="text-stone-300 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2"><PartyPopper size={14}/> Tu Ahorro Estimado</p>
+          <p className="text-stone-300 text-xs font-black uppercase tracking-widest mb-1 flex items-center gap-2"><PartyPopper size={14}/> Tu Hucha Feliz 🐷</p>
           <div className="flex items-baseline gap-1">
             <h2 className="text-6xl font-black tracking-tighter">{savings.toFixed(0)}</h2>
             <span className="text-2xl font-bold text-orange-400">€</span>
           </div>
-          <p className="text-stone-400 text-[10px] font-bold mt-2 uppercase tracking-widest opacity-80">*Por cocinar en casa vs comer fuera</p>
+          <p className="text-stone-400 text-[10px] font-bold mt-2 uppercase tracking-widest opacity-80">*Ahorrado vs comer fuera</p>
         </div>
         
         <div className="bg-teal-50 p-5 rounded-[2rem] border-2 border-teal-100 shadow-sm text-center flex flex-col justify-center">
-          <p className="text-teal-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">Valor Rescatado</p>
+          <p className="text-teal-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">Magia Anti-Sobras</p>
           <h4 className="text-3xl font-black text-teal-800">{wasteSaved.toFixed(0)}€</h4>
-          <p className="text-teal-600/70 text-[9px] font-bold mt-1 uppercase tracking-widest">*Salvado de la basura</p>
+          <p className="text-teal-600/70 text-[9px] font-bold mt-1 uppercase tracking-widest">*Salvado de la basura 🦸‍♂️</p>
         </div>
         
         <div className="bg-orange-50 p-5 rounded-[2rem] border-2 border-orange-100 shadow-sm text-center flex flex-col justify-center">
-          <p className="text-orange-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">En Nevera</p>
+          <p className="text-orange-600 text-[10px] font-black uppercase tracking-widest mb-1 leading-tight">Ingredientes</p>
           <h4 className="text-3xl font-black text-orange-800">{totalItems}</h4>
-          <p className="text-orange-600/70 text-[9px] font-bold mt-1 uppercase tracking-widest">*Ingredientes listos</p>
+          <p className="text-orange-600/70 text-[9px] font-bold mt-1 uppercase tracking-widest">*Listos para el show 🎨</p>
         </div>
       </div>
     </div>
@@ -608,26 +615,24 @@ const PantryView = ({ ingredients, setIngredients }: PantryProps) => {
     }));
   };
 
-  const PANTRY_PHRASES = [
-    "Todo lo que tenemos para aprovechar.",
-    "¡Vamos a darle vida a estos ingredientes!",
-    "Cero desperdicio, máximo sabor.",
-    "Tu lienzo en blanco culinario.",
-    "Aquí empieza la magia."
-  ];
-  const dailyPhrase = PANTRY_PHRASES[new Date().getDay() % PANTRY_PHRASES.length];
+  // 🚀 FRASES ALEATORIAS
+  const phrases = ["Tu lienzo en blanco culinario 🎨", "¡Vamos a darle vida a estos ingredientes! ✨", "Cero desperdicio, máximo sabor 🤤", "Aquí empieza la magia de hoy 🪄", "Ingredientes listos para la pasarela 💃"];
+  const randomPhrase = useMemo(() => phrases[Math.floor(Math.random() * phrases.length)], []);
+
+  const emptyPhrases = ["¡Ups! Tu nevera está bostezando 🥱", "Hace eco por aquí... ¡Añade algo! 🗣️", "Tu nevera pide mimitos 🥺", "¡Hora de hacer la compra virtual! 🛒"];
+  const randomEmptyPhrase = useMemo(() => emptyPhrases[Math.floor(Math.random() * emptyPhrases.length)], []);
 
   return (
     <div className="p-6 pt-10 pb-32 animate-in fade-in bg-[#FDFBF7] min-h-full">
-      <h1 className="text-3xl font-black mb-2 text-stone-800">Mi Neverita</h1>
-      <p className="text-stone-400 text-sm mb-6 font-medium italic">{dailyPhrase}</p>
+      <h1 className="text-3xl font-black mb-2 text-stone-800">Tu Neverita 🧊</h1>
+      <p className="text-stone-400 text-sm mb-6 font-medium italic">{randomPhrase}</p>
       
       <div className="flex gap-3 mb-6">
         <input 
           value={name} 
           onChange={e => setName(e.target.value)} 
           className="flex-1 p-4 rounded-2xl border-2 border-stone-200 outline-none font-bold text-stone-700 focus:border-teal-500 shadow-sm transition-all" 
-          placeholder="Añadir ingrediente..." 
+          placeholder="¿Qué hay por ahí perdido?" 
           onKeyDown={e => e.key === 'Enter' && add(name)}
         />
         <button onClick={() => add(name)} className="bg-teal-500 hover:bg-teal-600 text-white p-4 rounded-2xl transition-colors shadow-md active:scale-95">
@@ -651,8 +656,8 @@ const PantryView = ({ ingredients, setIngredients }: PantryProps) => {
         {ingredients.length === 0 && (
           <div className="text-center py-20 opacity-30 animate-pulse">
             <Utensils size={48} className="mx-auto mb-4"/>
-            <p className="font-bold text-lg">Nevera vacía</p>
-            <p className="text-sm">Añade algo para empezar</p>
+            <p className="font-bold text-lg">Todo vacío</p>
+            <p className="text-sm">{randomEmptyPhrase}</p>
           </div>
         )}
         
@@ -678,7 +683,7 @@ const PantryView = ({ ingredients, setIngredients }: PantryProps) => {
                   'bg-teal-50 text-teal-600 border-teal-100'
                 }`}
               >
-                {i.expiryStatus === 'urgent' ? '¡SOS! YA' : i.expiryStatus === 'soon' ? 'PRONTO' : 'FRESQUÍSIMO'}
+                {i.expiryStatus === 'urgent' ? '¡SÁLVAME! 🆘' : i.expiryStatus === 'soon' ? 'PRONTITO ⏰' : 'FRESQUÍSIMO ✨'}
               </button>
               <button
                 onClick={() => setIngredients(ingredients.filter((x: any) => x.id !== i.id))}
@@ -724,10 +729,13 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
     }
   };
 
+  const emptyPhrases = ["¡Lista limpia! Tienes el súper dominado 🛒", "Cero recados pendientes. ¡A disfrutar! 😎", "No falta nada. ¡Eres un crack de la organización! 🏆", "Todo bajo control, Chef 🫡"];
+  const randomEmptyPhrase = useMemo(() => emptyPhrases[Math.floor(Math.random() * emptyPhrases.length)], []);
+
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-black text-stone-800">Comprar</h1>
+        <h1 className="text-3xl font-black text-stone-800">El Súper 🛒</h1>
         {list.length > 0 && (
           <button onClick={share} className="p-3 bg-white border border-stone-200 rounded-xl text-stone-600 shadow-sm active:scale-95 transition-transform hover:bg-stone-50">
             <Share2 size={20}/>
@@ -753,7 +761,7 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
           <div className="text-center py-20 opacity-30">
             <ShoppingCart size={56} className="mx-auto mb-4"/>
             <p className="font-bold text-lg text-stone-500">Todo comprado.</p>
-            <p className="text-sm text-stone-400">Eres una máquina de la organización.</p>
+            <p className="text-sm text-stone-400">{randomEmptyPhrase}</p>
           </div>
         ) : (
           list.map((i: any, index: number) => (
@@ -781,7 +789,7 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
           onClick={() => setList(list.filter((x: any) => !x.checked))}
           className="w-full mt-10 py-5 bg-rose-50 text-rose-500 hover:bg-rose-100 font-black rounded-[1.5rem] uppercase tracking-widest text-sm transition-colors border border-rose-100 shadow-sm"
         >
-          Limpiar completados
+          Barrer lo comprado 🧹
         </button>
       )}
     </div>
@@ -793,12 +801,15 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
   
+  const emptyPhrases = ["¡Tu libro de hechizos está vacío! 📖", "Aún no hay obras de arte por aquí 🎨", "El recetario espera tus éxitos ✨", "¡Ponte el delantal y guarda aquí tu primera magia! 🧑‍🍳"];
+  const randomEmptyPhrase = useMemo(() => emptyPhrases[Math.floor(Math.random() * emptyPhrases.length)], []);
+
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-black text-stone-800">El Recetario</h1>
-          <p className="text-stone-400 text-sm font-medium italic mt-1">Tus platos estrella guardados.</p>
+          <h1 className="text-3xl font-black text-stone-800">El Recetario 📖</h1>
+          <p className="text-stone-400 text-sm font-medium italic mt-1">Tus mayores éxitos culinarios.</p>
         </div>
         {history.length > 0 && (
           <button
@@ -816,7 +827,7 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
           <input 
             value={search} 
             onChange={e => setSearch(e.target.value)} 
-            placeholder="Buscar receta guardada..." 
+            placeholder="Buscar esa receta tan rica..." 
             className="w-full p-4 pl-12 bg-white border-2 border-stone-100 rounded-[1.5rem] outline-none font-bold text-stone-700 focus:border-teal-400 transition-colors"
           />
         </div>
@@ -826,14 +837,13 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
         <div className="text-center py-20 opacity-30">
           <Star size={56} className="mx-auto mb-4"/>
           <p className="font-bold text-lg text-stone-500">
-            {history.length === 0 ? 'Recetario en blanco.' : 'No encontré esa receta.'}
+            {history.length === 0 ? 'Sin magia guardada.' : 'No encontramos ese plato.'}
           </p>
-          {history.length === 0 && <p className="text-sm text-stone-400">¡A los fogones!</p>}
+          {history.length === 0 && <p className="text-sm text-stone-400">{randomEmptyPhrase}</p>}
         </div>
       ) : (
         <div className="space-y-4">
           {filtered.map((r: any, i: number) => {
-            // Buscamos el índice real en el history original para borrarlo con precisión
             const realIndex = history.findIndex(h => h.id === r.id || (h.title === r.title && h.date === r.date));
             return (
               <div
@@ -909,11 +919,11 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
         await OneSignal.Slidedown.promptPush();
         setPushGranted(Notification.permission === "granted");
       } else {
-        onAlert("Las notificaciones están bloqueadas en tu navegador actual. Recuerda que en iPhone debes 'Añadir a la pantalla de inicio' primero.");
+        onAlert("Las notificaciones están bloqueadas. Tienes que darnos permiso en los ajustes de tu navegador o añadir la app al inicio en iPhone.");
       }
     } catch (error) {
       console.error(error);
-      onAlert("No se pudieron activar las notificaciones. Revisa los ajustes de tu teléfono.");
+      onAlert("Algo falló al pedir permisos. Cosas de la tecnología 😅");
     }
   };
 
@@ -1012,11 +1022,11 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
               onClick={requestNotifications}
               className="w-full py-4 bg-teal-50 hover:bg-teal-100 text-teal-600 rounded-2xl font-bold text-sm transition-colors flex justify-center items-center gap-2 border border-teal-100 active:scale-95"
             >
-              <Bell size={18}/> Activar Notificaciones
+              <Bell size={18}/> Avisadme de caducidades
             </button>
           ) : (
             <div className="w-full py-4 bg-stone-50 text-stone-400 rounded-2xl font-bold text-sm flex justify-center items-center gap-2 border border-stone-100">
-              <CheckCircle2 size={18} className="text-teal-500"/> Notificaciones Activadas
+              <CheckCircle2 size={18} className="text-teal-500"/> Avisos de caducidad activos
             </div>
           )}
 
@@ -1024,13 +1034,13 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
             onClick={() => { setProfile(l); onClose(); }}
             className="w-full py-5 bg-stone-900 hover:bg-black text-white rounded-2xl font-black text-lg shadow-xl active:scale-95 transition-all flex justify-center items-center gap-2"
           >
-            <Save size={20}/> Guardar Ajustes
+            <Save size={20}/> Guardar Cambios
           </button>
           <button
             onClick={onLogout}
             className="w-full py-4 text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-2xl font-bold text-xs uppercase tracking-widest transition-colors flex justify-center items-center gap-2"
           >
-            <User size={16}/> Cerrar Sesión
+            <User size={16}/> Salir de la cocina
           </button>
         </div>
       </div>
@@ -1068,7 +1078,7 @@ const PlannerView = ({
             onClick={toggleAlt}
             className="text-[10px] font-black bg-stone-100 text-stone-500 px-4 py-2 rounded-full flex items-center gap-1.5 active:scale-95 hover:bg-stone-200 transition-colors"
           >
-            <Repeat size={12}/> PLAN {isAlt ? 'B' : 'A'}
+            <Repeat size={12}/> OTRA OPCIÓN ✨
           </button>
         </div>
         <div onClick={() => onViewRecipe(r)} className="cursor-pointer">
@@ -1078,7 +1088,7 @@ const PlannerView = ({
               <Clock size={14} className="text-teal-500"/> {r.time || 'Rápido'}
             </span>
             <span className="text-xs font-black text-teal-700 bg-teal-100 px-3 py-1.5 rounded-lg">
-              CERO SOBRAS: {r.wasteValue || 0}€
+              SALVAS: {r.wasteValue || 0}€ 🦸‍♂️
             </span>
           </div>
           <p className="text-sm text-stone-500 font-medium line-clamp-2 italic leading-relaxed">
@@ -1093,7 +1103,7 @@ const PlannerView = ({
     <div className="p-6 pt-10 pb-32 animate-in fade-in bg-[#FDFBF7] min-h-full">
       <CustomStyles/>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-black text-stone-800 tracking-tight">La Magia</h1>
+        <h1 className="text-3xl font-black text-stone-800 tracking-tight">Hacer Magia ✨</h1>
       </div>
 
       {showSettings ? (
@@ -1126,7 +1136,7 @@ const PlannerView = ({
           onClick={onReset}
           className="w-full mb-8 py-5 bg-rose-50 text-rose-500 font-black rounded-[1.5rem] border-2 border-rose-100 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 shadow-sm active:scale-95"
         >
-          <Trash2 size={18}/> Borrar Plan Actual
+          <Trash2 size={18}/> Empezar de cero
         </button>
       )}
       
@@ -1140,7 +1150,7 @@ const PlannerView = ({
                 planType === 'daily' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:bg-stone-200/50'
               }`}
             >
-              Solo Hoy
+              Menú del día
             </button>
             <button
               onClick={() => setPlanType('batch')}
@@ -1148,14 +1158,14 @@ const PlannerView = ({
                 planType === 'batch' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:bg-stone-200/50'
               }`}
             >
-              <CalendarDays size={18}/> Batch Cooking
+              <CalendarDays size={18}/> Toda la semana
             </button>
           </div>
 
           {planType === 'batch' && (
             <div className="bg-white p-6 rounded-[2rem] border-2 border-stone-100 mb-6 shadow-sm animate-in zoom-in-95 duration-300">
               <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                <CalendarDays size={16} className="text-orange-500"/> 1. ¿Cuántos días?
+                <CalendarDays size={16} className="text-orange-500"/> 1. ¿Cuántos días te resuelvo?
               </p>
               <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar pb-2">
                 {[2, 3, 4, 5, 6, 7].map(d => (
@@ -1173,7 +1183,7 @@ const PlannerView = ({
                 ))}
               </div>
               <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                <Utensils size={16} className="text-teal-500"/> 2. ¿Qué comidas?
+                <Utensils size={16} className="text-teal-500"/> 2. ¿Para qué comidas?
               </p>
               <div className="flex gap-3">
                 {['lunch', 'dinner'].map((m: any) => (
@@ -1207,7 +1217,7 @@ const PlannerView = ({
                   : 'bg-white border-stone-200 text-stone-400 hover:bg-stone-50'
               }`}
             >
-              <Leaf size={24}/> CERO SOBRAS
+              <Leaf size={24}/> CERO SOBRAS 🦸‍♂️
             </button>
             <button
               onClick={() => setMode('chef')}
@@ -1217,7 +1227,7 @@ const PlannerView = ({
                   : 'bg-white border-stone-200 text-stone-400 hover:bg-stone-50'
               }`}
             >
-              <Sparkles size={24}/> MODO CHEF
+              <Sparkles size={24}/> MODO CHEF 🧑‍🍳
             </button>
           </div>
           
@@ -1226,7 +1236,7 @@ const PlannerView = ({
             className="w-full bg-stone-900 text-white py-6 rounded-[2rem] font-black text-xl shadow-xl active:scale-95 transition-all mt-2 hover:bg-black flex items-center justify-center gap-3 overflow-hidden group"
           >
             <ChefHat size={24} className="group-hover:animate-wiggle"/> 
-            <span className="relative z-10">¡CREAR MAGIA!</span>
+            <span className="relative z-10">¡Que surja la Magia! ✨</span>
             <div className="animate-shimmer absolute inset-0 opacity-20"></div>
           </button>
         </div>
@@ -1240,13 +1250,13 @@ const PlannerView = ({
           {plan.shopping_list && plan.shopping_list.length > 0 && (
             <div className="bg-orange-50 p-6 rounded-[2rem] border-2 border-orange-200 shadow-sm flex flex-col items-center text-center animate-fade-slide">
               <ShoppingBag className="text-orange-500 mb-3" size={32}/>
-              <h3 className="font-black text-orange-900 text-lg mb-2">Faltan {plan.shopping_list.length} ingredientes</h3>
-              <p className="text-sm text-orange-700 font-medium mb-4">La IA ha detectado que necesitas cosas de la tienda para este menú.</p>
+              <h3 className="font-black text-orange-900 text-lg mb-2">Faltan {plan.shopping_list.length} cositas</h3>
+              <p className="text-sm text-orange-700 font-medium mb-4">Nuestro Chef virtual dice que necesitarás pasar por el súper para estas recetas.</p>
               <button
                 onClick={() => onAddMissingToShoppingList(plan.shopping_list || [])}
                 className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-[1.5rem] shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
-                <Plus size={18}/> Añadir a la Compra
+                <Plus size={18}/> Añadir a la Compra 🛒
               </button>
             </div>
           )}
@@ -1254,7 +1264,7 @@ const PlannerView = ({
           {plan.type === 'batch' ? (
             <>
               <h3 className="text-2xl font-black text-stone-800 mb-6 px-2 flex items-center gap-2 animate-fade-slide" style={{ animationDelay: '100ms' }}>
-                <Utensils className="text-teal-500"/> Menú Resultante
+                <Utensils className="text-teal-500"/> Tus Menús Diarios
               </h3>
               <div className="space-y-6 mb-10">
                 {plan.days?.map((day: any, idx: number) => (
@@ -1303,10 +1313,10 @@ const PlannerView = ({
               <div className="bg-white p-8 rounded-[2.5rem] border-2 border-stone-100 shadow-lg mb-8 animate-fade-slide" style={{ animationDelay: '500ms' }}>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="bg-orange-100 p-3 rounded-2xl"><ListChecks className="text-orange-500" size={28}/></div>
-                  <h2 className="text-2xl font-black text-stone-900">Plan de Ataque</h2>
+                  <h2 className="text-2xl font-black text-stone-900">Plan de Ataque ⚔️</h2>
                 </div>
                 <p className="text-stone-600 font-medium mb-8 leading-relaxed italic border-l-4 border-orange-300 pl-4 bg-orange-50/50 py-2 rounded-r-xl">
-                  {plan.batch_masterclass?.intro || "¡Vamos a cocinar todo de golpe para descansar el resto de la semana!"}
+                  {plan.batch_masterclass?.intro || "¡Vamos a cocinar todo de golpe para descansar el resto de la semana como reyes!"}
                 </p>
                 
                 <div className="space-y-6">
@@ -1329,7 +1339,7 @@ const PlannerView = ({
 
                 <div className="mt-8 bg-teal-50 p-6 rounded-2xl border-2 border-teal-100 shadow-sm">
                   <h4 className="font-black text-teal-900 text-lg mb-4 flex items-center gap-2">
-                    <ThermometerSnowflake size={20}/> Organización de Tuppers
+                    <ThermometerSnowflake size={20}/> Organización de Tuppers 🍱
                   </h4>
                   <ul className="space-y-3">
                     {(plan.batch_masterclass?.storage_tips || []).map((tip: string, i: number) => (
@@ -1354,7 +1364,6 @@ const PlannerView = ({
   );
 };
 
-// 🚀 REFACTORIZADA: VISTA DE RECETA CON BOTÓN DE COMPARTIR Y GUARDAR INDEPENDIENTE
 interface RecipeDetailProps { recipe: Recipe; onBack: () => void; onCooked: () => void; onSave: () => void; isSaved: boolean; onAlert: (m:string)=>void; }
 const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: RecipeDetailProps) => {
   const safeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -1378,7 +1387,7 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
       dummy.select();
       document.execCommand("copy");
       document.body.removeChild(dummy);
-      onAlert("¡Receta copiada al portapapeles!");
+      onAlert("¡Copiado! Listo para mandarlo por WhatsApp. 🚀");
     }
   };
 
@@ -1454,13 +1463,13 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
         className="w-full py-6 bg-stone-900 text-white rounded-[2rem] font-black text-xl shadow-xl hover:bg-black active:scale-95 transition-all flex justify-center gap-3 items-center border-4 border-stone-800 animate-fade-slide"
         style={{ animationDelay: '200ms' }}
       >
-        <CheckCircle2 size={28}/> ¡He cocinado esto!
+        <CheckCircle2 size={28}/> ¡Plato terminado! 🤤
       </button>
     </div>
   );
 };
 
-// 🚀 REFACTORIZADO: CHECKBOXES DESMARCADOS POR DEFECTO Y TEXTO DIRECTO
+// 🚀 REFACTORIZADO TEXTOS + UX "PARA TONTOS"
 interface ConsumptionModalProps { recipe: Recipe; ingredients: Ingredient[]; onConfirm: (c: string[]) => void; onClose: () => void; }
 const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: ConsumptionModalProps) => {
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
@@ -1473,7 +1482,6 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
     return match.length > 0 ? match : ingredients;
   }, [recipe, ingredients]);
 
-  // EMPIEZAN VACÍOS PARA EVITAR BORRADOS ACCIDENTALES
   const [selected, setSelected] = useState<string[]>([]);
   const toggle = (id: string) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
@@ -1483,9 +1491,9 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
         <div className="w-16 h-1.5 bg-stone-200 rounded-full mx-auto mb-8"></div>
         <div className="flex justify-center mb-6"><PartyPopper size={48} className="text-orange-500 animate-wiggle"/></div>
         
-        <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Plato terminado!</h2>
+        <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Eres un artista! 🧑‍🍳</h2>
         <p className="text-center text-stone-500 mb-8 font-medium text-base px-2">
-          ¡A comer! Marca abajo los ingredientes que te has <b>terminado por completo</b> para borrarlos de tu nevera. Si te sobra, déjalos desmarcados.
+          Has salvado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b> de la basura 💸. ¿Qué ingredientes te has <b>terminado por completo</b>? Márcalos abajo para borrarlos de la nevera (si te sobra algo, déjalo sin marcar):
         </p>
         
         <div className="space-y-3 mb-10 max-h-64 overflow-y-auto no-scrollbar pb-4 px-2">
@@ -1517,7 +1525,7 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
             onClick={() => onConfirm(selected)}
             className="flex-[2] py-5 bg-[#5CB82C] text-white rounded-[1.5rem] font-black shadow-lg active:scale-95 transition-transform text-sm uppercase tracking-widest flex items-center justify-center gap-2"
           >
-            <CheckCircle2 size={18}/> Aceptar
+            <Save size={18}/> Guardar Éxito 📖
           </button>
         </div>
       </div>
@@ -1736,7 +1744,6 @@ export default function App() {
     }
   }, [user]);
 
-  // 🚀 NUEVA LÓGICA: GUARDAR RECETA INDEPENDIENTE DE SI SE COCINA O NO
   const handleSaveRecipe = async (recipeToSave: Recipe) => {
     const safeId = recipeToSave.id || Date.now().toString();
     const isAlreadyInHistory = history.some(h => h.id === safeId || (h.title === recipeToSave.title && h.date === new Date().toLocaleDateString()));
@@ -1757,26 +1764,24 @@ export default function App() {
           recipe_data: recipeWithId
         });
       }
-      setAlertMessage("¡Receta guardada en tu recetario para luego!");
+      setAlertMessage("¡Hechizo guardado en tu recetario para hacerlo cuando quieras! 📖✨");
       if (POSTHOG_KEY) posthog.capture('recipe_bookmarked', { title: recipeToSave.title });
     } else {
-      setAlertMessage("Esta receta ya la tienes guardada en tu recetario.");
+      setAlertMessage("¡Eh! Esta receta ya la tienes guardada a buen recaudo. 😉");
     }
   };
 
-  // 🚀 LÓGICA DE BORRADO DE RECETAS INDIVIDUALES POR ÍNDICE EXACTO (Evita borrar duplicados)
   const handleDeleteRecipe = useCallback((indexToDelete: number) => {
     const recipe = history[indexToDelete];
     if (!recipe) return;
 
     setConfirmAction({
-      message: `¿Quieres borrar "${recipe.title}" de tu recetario?`,
+      message: `¿Quieres borrar "${recipe.title}" de tu recetario para siempre? 🥺`,
       onConfirm: async () => {
         const newHistory = history.filter((_, i) => i !== indexToDelete);
         setHistory(newHistory);
         localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
         if (user) {
-          // Si tiene ID lo usamos, si no, intentamos borrar por título asumiendo el riesgo
           if (recipe.id) {
             await supabase.from('history').delete().eq('user_id', user.id).eq('recipe_data->>id', recipe.id);
           } else {
@@ -1790,7 +1795,7 @@ export default function App() {
 
   const handleClearHistory = useCallback(() => {
     setConfirmAction({
-      message: "¿Seguro que quieres borrar TODAS tus recetas? Tu recetario quedará vacío.",
+      message: "¿Seguro que quieres borrar TODAS tus obras de arte? Tu recetario quedará totalmente en blanco. 😱",
       onConfirm: async () => {
         setHistory([]);
         localStorage.setItem('platoplan_history', '[]');
@@ -1802,15 +1807,14 @@ export default function App() {
   }, [user]);
 
   const generate = useCallback(async () => {
-    if (!GEMINI_API_KEY) return setAlertMessage("Falta configurar la clave de la IA. Tu cocina no tiene magia ahora mismo.");
-    if (ingredients.length === 0) return setAlertMessage("¡Tu nevera está vacía! Añade algún ingrediente primero.");
+    if (!GEMINI_API_KEY) return setAlertMessage("Falta configurar la llave mágica de la IA. Tu cocina no tiene luz ahora mismo. 🔌");
+    if (ingredients.length === 0 && mode === 'aprovechamiento') return setAlertMessage("¡Tu nevera está vacía! Añade algún ingrediente para hacer magia de aprovechamiento. 🧊");
     
     setLoading(true);
     setLoadingStartTime(Date.now()); 
     
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
-      // Inyectamos IDs únicos a las recetas generadas
       if (data.lunch) data.lunch.id = Date.now().toString() + "-L";
       if (data.dinner) data.dinner.id = Date.now().toString() + "-D";
       if (data.lunch_alt) data.lunch_alt.id = Date.now().toString() + "-LA";
@@ -1819,7 +1823,7 @@ export default function App() {
       setPlan(data);
       localStorage.setItem('platoplan_current_plan', JSON.stringify(data));
     } else {
-      setAlertMessage("Vaya, la cocina está revolucionada. Inténtalo de nuevo en un momentito.");
+      setAlertMessage("Vaya, la cocina está patas arriba. Inténtalo de nuevo en un momentito. 👨‍🍳");
     }
     setLoading(false);
   }, [ingredients, profile, mode, planType, batchConfig]);
@@ -1829,18 +1833,6 @@ export default function App() {
       const newSavings = savings + Math.max(0, (15 * profile.people) - (selectedRecipe.priceEstimate || 0));
       const newWaste = wasteSaved + (selectedRecipe.wasteValue || 0);
       
-      setSavings(newSavings);
-      setWasteSaved(newWaste);
-      localStorage.setItem('platoplan_savings', newSavings.toString());
-      localStorage.setItem('platoplan_waste', newWaste.toString());
-      if (user) await supabase.from('profiles').update({ savings: newSavings, waste_saved: newWaste }).eq('id', user.id);
-      
-      updatePantry(ingredients.filter(i => !consumed.includes(i.id)));
-      if (POSTHOG_KEY) posthog.capture('recipe_cooked', { recipe_title: selectedRecipe.title, waste_saved: selectedRecipe.wasteValue });
-      
-      setShowConfirm(false);
-      
-      // La guardamos automáticamente al cocinarla si no estaba ya
       const safeId = selectedRecipe.id || Date.now().toString();
       const isAlreadyInHistory = history.some(h => h.id === safeId || (h.title === selectedRecipe.title && h.date === new Date().toLocaleDateString()));
       
@@ -1860,10 +1852,20 @@ export default function App() {
           });
         }
       }
-
+      
+      setSavings(newSavings);
+      setWasteSaved(newWaste);
+      localStorage.setItem('platoplan_savings', newSavings.toString());
+      localStorage.setItem('platoplan_waste', newWaste.toString());
+      if (user) await supabase.from('profiles').update({ savings: newSavings, waste_saved: newWaste }).eq('id', user.id);
+      
+      updatePantry(ingredients.filter(i => !consumed.includes(i.id)));
+      if (POSTHOG_KEY) posthog.capture('recipe_cooked', { recipe_title: selectedRecipe.title, waste_saved: selectedRecipe.wasteValue });
+      
+      setShowConfirm(false);
       setSelectedRecipe(null);
       localStorage.removeItem('platoplan_selected_recipe');
-      setAlertMessage("¡Hecho! Hemos sumado tu ahorro al Panel de Inicio.");
+      setAlertMessage("¡Receta completada! Hemos sumado tu ahorro a la Hucha Feliz. 🐷💸");
       navigateTo('dashboard'); 
     }
   }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo]);
@@ -1931,7 +1933,7 @@ export default function App() {
     });
     
     updateList(updatedList);
-    setAlertMessage("¡Ingredientes añadidos y fusionados en tu lista de la compra!");
+    setAlertMessage("¡Hecho! Hemos metido los ingredientes que te faltan en tu carrito del súper. 🛒");
     if (plan) {
       const newPlan = { ...plan, shopping_list: [] };
       setPlan(newPlan);
@@ -1952,7 +1954,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-teal-500 mb-4"/>
-        <p className="font-bold text-stone-500">Cargando tu cocina...</p>
+        <p className="font-bold text-stone-500">Encendiendo los fogones...</p>
       </div>
     );
   }
