@@ -136,7 +136,6 @@ const LOADING_MESSAGES = [
 
 // --- 5. LÓGICA DE IA (TEXTO Y VISIÓN) ---
 
-// 🚀 NUEVA IA: ESCÁNER MULTIMODAL
 const scanIngredientsFromImage = async (apiKey: string, base64Image: string, mimeType: string): Promise<any[]> => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -147,7 +146,7 @@ const scanIngredientsFromImage = async (apiKey: string, base64Image: string, mim
 
     const prompt = `Eres una IA experta en nutrición y lectura de datos. Analiza esta imagen (puede ser un ticket de supermercado o una foto de una nevera/comida).
     Tus reglas:
-    1. Extrae SOLO los ingredientes o alimentos.
+    1. Extrae SOLO los ingredientes o alimentos. Puedes entender varios idiomas (Catalán, Español, etc) pero debes traducirlo todo al ESPAÑOL ESTÁNDAR.
     2. Ignora completamente precios, marcas, cantidades complejas, fechas, papel higiénico, productos de limpieza u objetos que no se comen.
     3. Traduce o limpia los nombres a genéricos (Ejemplo: en vez de "Pollo fileteado Hacendado", pon "Pollo").
     4. Clasifícalos en "category" usando SOLO una de estas opciones: 'veg', 'protein', 'dairy', 'pantry'.
@@ -246,7 +245,7 @@ const generateRealPlan = async (
     
     return parsed;
   } catch (error: any) {
-    console.error("Error de IA:", error);
+    console.error("Error silencioso de IA:", error);
     if (POSTHOG_KEY) posthog.capture('plan_generation_error', { error: error.message });
     return null;
   }
@@ -433,33 +432,16 @@ const AuthView = ({ onAlert }: AuthViewProps) => {
   );
 };
 
-interface OnboardingProps { onComplete: () => void; profile: UserProfile; setProfile: (p: UserProfile) => void; }
-const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) => {
+// 🚀 REFACTORIZADO: ONBOARDING PURAMENTE INFORMATIVO (MINI-TUTORIAL)
+interface OnboardingProps { onComplete: () => void; }
+const OnboardingView = ({ onComplete }: OnboardingProps) => {
   const [step, setStep] = useState(0); 
-  const [customAllergy, setCustomAllergy] = useState('');
   
   const INTRO_SLIDES = [
-    { title: "Planificación a tu medida", text: "Dinos cuántos sois y qué os gusta. Nosotros nos encargamos del resto.", icon: <BookOpen size={80} className="text-stone-700"/>, color: "bg-teal-100" },
-    { title: "Compra sin estrés", text: "Haz la compra una vez a la semana con una lista generada mágicamente.", icon: <ShoppingBag size={80} className="text-stone-700"/>, color: "bg-orange-100" },
-    { title: "Magia Anti-Sobras", text: "Apunta qué tienes a punto de caducar en la nevera y crearemos un platazo de la nada.", icon: <Leaf size={80} className="text-stone-700"/>, color: "bg-rose-100" }
+    { title: "Escanea tu compra", text: "Hazle una foto al ticket del súper o a la comida directamente. La IA organizará tu nevera sola. 📸", icon: <Camera size={80} className="text-stone-700"/>, color: "bg-teal-100" },
+    { title: "Magia Anti-Sobras", text: "Con un solo botón, creamos recetas increíbles con lo que tienes a punto de caducar. ¡Ahorra dinero! 💸", icon: <Sparkles size={80} className="text-stone-700"/>, color: "bg-orange-100" },
+    { title: "Lista Inteligente", text: "Lo que te falte se añade solo a la lista de la compra. Tacha en el súper con un toque y listo. 🛒", icon: <CheckCircle2 size={80} className="text-stone-700"/>, color: "bg-rose-100" }
   ];
-
-  const toggleDislike = (item: string) => {
-    const safeAllergies = Array.isArray(profile.allergies) ? profile.allergies : [];
-    setProfile({
-      ...profile,
-      allergies: safeAllergies.includes(item)
-        ? safeAllergies.filter((a:any) => a !== item)
-        : [...safeAllergies, item]
-    });
-  };
-
-  const addCustomAllergy = () => {
-    if (customAllergy.trim() && !(profile.allergies||[]).includes(customAllergy.trim())) {
-      toggleDislike(customAllergy.trim());
-      setCustomAllergy('');
-    }
-  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col p-6 text-stone-900 animate-in fade-in">
@@ -473,93 +455,29 @@ const OnboardingView = ({ onComplete, profile, setProfile }: OnboardingProps) =>
       )}
 
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full">
-        {step < 3 && (
-          <div className="text-center animate-in slide-in-from-right-8 duration-500 flex flex-col items-center justify-center h-full pb-10">
-            <h1 className="text-3xl font-black mb-10 tracking-tight leading-tight">{INTRO_SLIDES[step].title}</h1>
-            <div className={`w-48 h-48 ${INTRO_SLIDES[step].color} rounded-[3rem] flex items-center justify-center mb-10 transform rotate-3 shadow-lg`}>
-              <div className="transform -rotate-3">{INTRO_SLIDES[step].icon}</div>
-            </div>
-            <p className="text-stone-500 text-lg mb-12 font-medium leading-relaxed px-4">{INTRO_SLIDES[step].text}</p>
-            
-            <div className="flex gap-3 justify-center mb-10">
-              {[0,1,2].map((i) => (
-                <div key={i} className={`h-2.5 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-stone-800' : 'w-2 bg-stone-200'}`}></div>
-              ))}
-            </div>
-            <button onClick={() => setStep(step + 1)} className="w-full py-5 bg-[#5CB82C] text-white rounded-[1.2rem] font-bold text-lg shadow-lg active:scale-95 transition-all hover:bg-[#4a9c22] hover:shadow-xl">
-              ¡Suena genial!
-            </button>
+        <div className="text-center animate-in slide-in-from-right-8 duration-500 flex flex-col items-center justify-center h-full pb-10">
+          <h1 className="text-3xl font-black mb-10 tracking-tight leading-tight px-4">{INTRO_SLIDES[step].title}</h1>
+          <div className={`w-48 h-48 ${INTRO_SLIDES[step].color} rounded-[3rem] flex items-center justify-center mb-10 transform rotate-3 shadow-lg`}>
+            <div className="transform -rotate-3">{INTRO_SLIDES[step].icon}</div>
           </div>
-        )}
-
-        {step === 3 && (
-          <div className="animate-in slide-in-from-right-8 duration-500 pb-10 flex flex-col h-full mt-4">
-            <h2 className="text-4xl font-black mb-8">¿Cómo os gusta comer? 🥗</h2>
-            <div className="flex-1 space-y-3 overflow-y-auto no-scrollbar pb-4">
-              {DIET_OPTIONS.map(diet => {
-                const isSel = profile.style === diet.id;
-                return (
-                  <button
-                    key={diet.id}
-                    onClick={() => { setProfile({...profile, style: diet.id}); setTimeout(() => setStep(4), 300); }}
-                    className={`w-full p-6 rounded-[1.2rem] text-left transition-all duration-300 flex justify-between items-center border-2 ${
-                      isSel ? 'bg-[#FBE885] border-transparent shadow-md transform scale-[1.02]' : 'bg-stone-50 border-stone-100 text-stone-700 hover:bg-stone-100 active:scale-95'
-                    }`}
-                  >
-                    <span className="font-bold text-xl">{diet.id}</span>
-                    {isSel && <span className="text-xs font-bold text-stone-600 uppercase tracking-widest">{diet.desc}</span>}
-                  </button>
-                );
-              })}
-            </div>
-            <button onClick={() => setStep(4)} className="w-full py-5 bg-[#5CB82C] text-white rounded-[1.2rem] font-bold text-lg shadow-lg active:scale-95 transition-all mt-6">
-              Siguiente Paso
-            </button>
+          <p className="text-stone-500 text-lg mb-12 font-medium leading-relaxed px-6">{INTRO_SLIDES[step].text}</p>
+          
+          <div className="flex gap-3 justify-center mb-10">
+            {[0,1,2].map((i) => (
+              <div key={i} className={`h-2.5 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-stone-800' : 'w-2 bg-stone-200'}`}></div>
+            ))}
           </div>
-        )}
-
-        {step === 4 && (
-          <div className="animate-in slide-in-from-right-8 duration-500 flex flex-col h-full pb-10 mt-4">
-            <div className="flex justify-between items-end mb-6">
-              <h2 className="text-4xl font-black leading-tight">¿Algo que debamos evitar? 🚫</h2>
-            </div>
-            
-            <div className="flex gap-2 mb-6">
-              <input
-                value={customAllergy}
-                onChange={e => setCustomAllergy(e.target.value)}
-                placeholder="Ej: Canela, Manzana..."
-                className="flex-1 p-4 rounded-xl border-2 border-stone-100 outline-none focus:border-teal-400 font-bold bg-stone-50 text-stone-800 transition-all"
-                onKeyDown={e => e.key === 'Enter' && addCustomAllergy()}
-              />
-              <button onClick={addCustomAllergy} className="bg-stone-900 text-white p-4 rounded-xl px-6 font-bold shadow-md active:scale-95 transition-all">
-                Añadir
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto no-scrollbar">
-              <div className="flex flex-wrap gap-3 pb-6">
-                {Array.from(new Set([...(profile.allergies||[]), ...DISLIKES_OPTIONS])).map(a => {
-                  const isSel = (profile.allergies||[]).includes(a as string);
-                  return (
-                    <button
-                      key={a as string}
-                      onClick={() => toggleDislike(a as string)}
-                      className={`px-5 py-4 rounded-[1rem] font-bold text-base transition-all duration-300 ${
-                        isSel ? 'bg-stone-800 text-white shadow-md transform scale-105' : 'bg-stone-50 text-stone-600 hover:bg-stone-100 active:scale-95 border border-stone-100'
-                      }`}
-                    >
-                      {a as string}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <button onClick={() => onComplete()} className="w-full py-5 bg-stone-900 text-white rounded-[1.5rem] font-black text-xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] active:scale-95 transition-all mt-6 hover:bg-black">
-              ¡Que empiece la Magia! ✨
-            </button>
-          </div>
-        )}
+          
+          <button 
+            onClick={() => {
+              if (step === 2) onComplete();
+              else setStep(step + 1);
+            }} 
+            className="w-full py-5 bg-[#5CB82C] text-white rounded-[1.2rem] font-bold text-lg shadow-lg active:scale-95 transition-all hover:bg-[#4a9c22] hover:shadow-xl"
+          >
+            {step === 2 ? '¡Empezar a Cocinar! 🍳' : 'Siguiente'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -607,7 +525,7 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
 
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, {profileName}! 👋</h1>
+          <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, Chef! 👋</h1>
           <p className="text-stone-400 text-sm font-bold mt-1">{randomGreeting}</p>
         </div>
         <div className="bg-white w-12 h-12 rounded-[1rem] shadow-[0_5px_15px_rgba(0,0,0,0.05)] border border-stone-100 flex items-center justify-center cursor-pointer active:scale-90 transition-transform">
@@ -678,7 +596,6 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
     }));
   };
 
-  // 🚀 LÓGICA DE VISIÓN ARTIFICIAL (NUEVO)
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -733,7 +650,7 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
       <h1 className="text-3xl font-black mb-2 text-stone-800">Tu Neverita 🧊</h1>
       <p className="text-stone-400 text-sm mb-6 font-medium italic">{randomPhrase}</p>
       
-      {/* 🚀 BOTÓN GIGANTE DEL ESCÁNER MÁGICO */}
+      {/* 🚀 BOTÓN ESCÁNER CLARO "PARA TONTOS" */}
       <input 
         type="file" 
         accept="image/*" 
@@ -744,9 +661,12 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
       />
       <label 
         htmlFor="camera-input"
-        className="w-full bg-gradient-to-r from-stone-800 to-stone-900 text-white p-5 rounded-[1.5rem] shadow-[0_10px_25px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer mb-6 font-black text-lg group"
+        className="w-full bg-gradient-to-r from-stone-800 to-stone-900 text-white p-5 rounded-[1.5rem] shadow-[0_10px_25px_rgba(0,0,0,0.15)] hover:shadow-[0_15px_35px_rgba(0,0,0,0.2)] active:scale-95 transition-all flex flex-col items-center justify-center cursor-pointer mb-6 group"
       >
-        <Camera size={26} className="group-hover:animate-wiggle text-teal-400"/> ¡Escáner Mágico (Foto)! ✨
+        <div className="flex items-center gap-3 font-black text-lg">
+           <Camera size={26} className="group-hover:animate-wiggle text-teal-400"/> Escanear Ticket o Comida
+        </div>
+        <span className="text-xs text-stone-300 font-medium mt-1 opacity-80 group-hover:opacity-100 transition-opacity">La IA leerá los ingredientes por ti ✨</span>
       </label>
       
       <div className="flex gap-3 mb-6 relative z-10">
@@ -762,6 +682,16 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
         </button>
       </div>
       
+      {/* 🚀 CHIVATO VISUAL: Cómo caducar comida */}
+      {ingredients.length > 0 && (
+         <div className="mb-6 bg-amber-50/50 p-3 rounded-[1.2rem] border border-amber-100 flex items-start gap-3">
+           <div className="mt-0.5">💡</div>
+           <p className="text-xs text-stone-500 font-medium leading-relaxed">
+             <b>Toque secreto:</b> Pulsa en los botones de "FRESQUÍSIMO" para avisarme si algo está a punto de caducar 🆘.
+           </p>
+         </div>
+      )}
+
       <div className="mb-6 overflow-x-auto pb-4 flex gap-2 no-scrollbar -mx-6 px-6">
         {STAPLES.map(s => (
           <button
@@ -776,7 +706,7 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
       
       <div className="space-y-3">
         {ingredients.length === 0 && (
-          <div className="text-center py-24 opacity-40 animate-pulse">
+          <div className="text-center py-10 opacity-40 animate-pulse">
             <Utensils size={48} className="mx-auto mb-4 text-stone-400"/>
             <p className="font-bold text-lg text-stone-600">Todo vacío</p>
             <p className="text-sm text-stone-500">{randomEmptyPhrase}</p>
@@ -857,7 +787,8 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-black text-stone-800">El Súper 🛒</h1>
+        {/* 🚀 NOMBRE CAMBIADO */}
+        <h1 className="text-3xl font-black text-stone-800">Lista de la compra 🛒</h1>
         {list.length > 0 && (
           <button onClick={share} className="p-3 bg-white border border-stone-100 rounded-xl text-stone-500 shadow-sm active:scale-90 transition-all hover:text-stone-800 hover:shadow-md">
             <Share2 size={20}/>
@@ -1242,7 +1173,8 @@ const PlannerView = ({
           className="bg-white border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] p-5 rounded-[2rem] mb-6 flex justify-between items-center cursor-pointer hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all group active:scale-[0.98]"
         >
           <div>
-            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">Cocinando para:</p>
+            {/* 🚀 TEXTO CLARO */}
+            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">¿Para cuántos preparamos el menú?</p>
             <p className="text-sm text-stone-700 font-bold capitalize">
               {profile.people} pax • {profile.style} • {profile.robot || 'Sartén'}
             </p>
@@ -1274,13 +1206,15 @@ const PlannerView = ({
             >
               Menú del día
             </button>
+            {/* 🚀 BOTÓN BATCHCOOKING CLARO */}
             <button
               onClick={() => setPlanType('batch')}
-              className={`flex-1 py-4 text-sm font-black rounded-[1.2rem] transition-all duration-300 flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 text-sm font-black rounded-[1.2rem] transition-all duration-300 flex flex-col items-center justify-center ${
                 planType === 'batch' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:text-stone-700'
               }`}
             >
-              <CalendarDays size={18}/> Toda la semana
+              <span className="flex items-center gap-2"><CalendarDays size={16}/> Batchcooking</span>
+              <span className={`text-[10px] font-bold mt-0.5 ${planType === 'batch' ? 'opacity-50' : 'opacity-40'}`}>(Toda la semana)</span>
             </button>
           </div>
 
@@ -1331,25 +1265,28 @@ const PlannerView = ({
           )}
 
           <div className="flex gap-3 mb-8">
+            {/* 🚀 BOTONES "PARA TONTOS" */}
             <button
               onClick={() => setMode('aprovechamiento')}
-              className={`flex-1 py-5 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 active:scale-95 ${
+              className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 active:scale-95 ${
                 mode === 'aprovechamiento'
                   ? 'bg-teal-50 border-teal-300 text-teal-800 shadow-sm'
-                  : 'bg-white border-stone-100 text-stone-400 hover:bg-stone-50'
+                  : 'bg-white border-stone-100 text-stone-500 hover:bg-stone-50'
               }`}
             >
-              <Leaf size={24} className={mode === 'aprovechamiento' ? 'animate-wiggle' : ''}/> CERO SOBRAS 🦸‍♂️
+              <span className="flex items-center gap-1.5 text-sm"><Leaf size={20} className={mode === 'aprovechamiento' ? 'animate-wiggle' : ''}/> CERO SOBRAS</span>
+              <span className="text-[10px] font-bold opacity-60">Usa solo lo que tienes</span>
             </button>
             <button
               onClick={() => setMode('chef')}
-              className={`flex-1 py-5 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-2 active:scale-95 ${
+              className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 active:scale-95 ${
                 mode === 'chef'
                   ? 'bg-orange-50 border-orange-300 text-orange-800 shadow-sm'
-                  : 'bg-white border-stone-100 text-stone-400 hover:bg-stone-50'
+                  : 'bg-white border-stone-100 text-stone-500 hover:bg-stone-50'
               }`}
             >
-              <Sparkles size={24} className={mode === 'chef' ? 'animate-pulse' : ''}/> MODO CHEF 🧑‍🍳
+              <span className="flex items-center gap-1.5 text-sm"><Sparkles size={20} className={mode === 'chef' ? 'animate-pulse' : ''}/> MODO CHEF</span>
+              <span className="text-[10px] font-bold opacity-60">Recetas con libertad</span>
             </button>
           </div>
           
