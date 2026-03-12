@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Bookmark, Camera
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Camera, Heart, XOctagon
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -51,6 +51,12 @@ const CustomStyles = () => (
     @keyframes fadeSlide { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
     .animate-fade-slide { animation: fadeSlide 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     
+    @keyframes swipeLeft { 0% { transform: translateX(0) rotate(0deg); opacity: 1; } 100% { transform: translateX(-150%) rotate(-15deg); opacity: 0; } }
+    .animate-swipe-left { animation: swipeLeft 0.5s forwards; }
+
+    @keyframes swipeRight { 0% { transform: translateX(0) scale(1); opacity: 1; } 50% { transform: scale(1.05); } 100% { transform: translateX(150%) rotate(15deg); opacity: 0; } }
+    .animate-swipe-right { animation: swipeRight 0.5s forwards; }
+
     @keyframes shimmer { 100% { transform: translateX(100%); } }
     .animate-shimmer { position: relative; overflow: hidden; }
     .animate-shimmer::after {
@@ -69,10 +75,29 @@ const CustomStyles = () => (
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    .glass-nav { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+    /* Navbar Blindada Anti-Transparencias */
+    .glass-nav { background: rgba(253, 251, 247, 0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     .glass-modal { background: rgba(253, 251, 247, 0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
   `}} />
 );
+
+// --- ALGORITMO VISUAL PARA EL RECETARIO (NIVEL DIOS) ---
+const getEmojiForRecipe = (title: string) => {
+  const t = (title || "").toLowerCase();
+  if (t.includes('pollo')) return '🍗';
+  if (t.includes('ensalada') || t.includes('verdura') || t.includes('verde')) return '🥗';
+  if (t.includes('pasta') || t.includes('macarrones') || t.includes('espagueti')) return '🍝';
+  if (t.includes('arroz') || t.includes('paella') || t.includes('risotto')) return '🥘';
+  if (t.includes('pescado') || t.includes('salmón') || t.includes('atún') || t.includes('merluza')) return '🐟';
+  if (t.includes('huevo') || t.includes('tortilla') || t.includes('revuelto')) return '🍳';
+  if (t.includes('sopa') || t.includes('crema') || t.includes('puré')) return '🥣';
+  if (t.includes('carne') || t.includes('ternera') || t.includes('cerdo') || t.includes('hamburguesa')) return '🥩';
+  if (t.includes('pizza') || t.includes('masa')) return '🍕';
+  if (t.includes('taco') || t.includes('fajita') || t.includes('burrito')) return '🌮';
+  if (t.includes('patata') || t.includes('frita')) return '🍟';
+  if (t.includes('postre') || t.includes('dulce') || t.includes('tarta')) return '🍰';
+  return '🍽️'; 
+};
 
 // --- 3. TIPOS E INTERFACES ESTRICTAS ---
 type ExpiryStatus = 'fresh' | 'soon' | 'urgent';
@@ -432,7 +457,6 @@ const AuthView = ({ onAlert }: AuthViewProps) => {
   );
 };
 
-// 🚀 REFACTORIZADO: ONBOARDING PURAMENTE INFORMATIVO (MINI-TUTORIAL)
 interface OnboardingProps { onComplete: () => void; }
 const OnboardingView = ({ onComplete }: OnboardingProps) => {
   const [step, setStep] = useState(0); 
@@ -483,8 +507,9 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
   );
 };
 
-interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; }
-const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry }: DashboardProps) => {
+// 🚀 REFACTORIZADO DASHBOARD: AÑADIDAS LAS RACHAS DE FUEGO 🔥
+interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; streak: number; }
+const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry, streak }: DashboardProps) => {
   const level = useMemo(() => {
     if (savings < 30) return { name: "Pinche Aprendiz", icon: "🌱", color: "text-stone-500", next: 30 };
     if (savings < 100) return { name: "Chef con Arte", icon: "👨‍🍳", color: "text-teal-500", next: 100 };
@@ -523,13 +548,17 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, Chef! 👋</h1>
           <p className="text-stone-400 text-sm font-bold mt-1">{randomGreeting}</p>
         </div>
-        <div className="bg-white w-12 h-12 rounded-[1rem] shadow-[0_5px_15px_rgba(0,0,0,0.05)] border border-stone-100 flex items-center justify-center cursor-pointer active:scale-90 transition-transform">
-          <ChefHat className="text-teal-500 animate-wiggle" size={24} />
+        <div className="flex flex-col items-end">
+           {/* 🚀 EL FUEGO DE LAS RACHAS */}
+           <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-100 shadow-sm ${streak > 0 ? 'bg-orange-50 text-orange-600' : 'bg-stone-50 text-stone-400'}`}>
+              <Flame size={16} className={streak > 0 ? 'animate-pulse' : ''} />
+              <span className="font-black text-sm">{streak} Días</span>
+           </div>
         </div>
       </div>
       
@@ -650,7 +679,6 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
       <h1 className="text-3xl font-black mb-2 text-stone-800">Tu Neverita 🧊</h1>
       <p className="text-stone-400 text-sm mb-6 font-medium italic">{randomPhrase}</p>
       
-      {/* 🚀 BOTÓN ESCÁNER CLARO "PARA TONTOS" */}
       <input 
         type="file" 
         accept="image/*" 
@@ -682,7 +710,6 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
         </button>
       </div>
       
-      {/* 🚀 CHIVATO VISUAL: Cómo caducar comida */}
       {ingredients.length > 0 && (
          <div className="mb-6 bg-amber-50/50 p-3 rounded-[1.2rem] border border-amber-100 flex items-start gap-3">
            <div className="mt-0.5">💡</div>
@@ -787,7 +814,6 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
-        {/* 🚀 NOMBRE CAMBIADO */}
         <h1 className="text-3xl font-black text-stone-800">Lista de la compra 🛒</h1>
         {list.length > 0 && (
           <button onClick={share} className="p-3 bg-white border border-stone-100 rounded-xl text-stone-500 shadow-sm active:scale-90 transition-all hover:text-stone-800 hover:shadow-md">
@@ -849,6 +875,7 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   );
 };
 
+// 🚀 REFACTORIZADO: RECETARIO NIVEL DIOS (LIBRO DE HECHIZOS)
 interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRecipe: (index: number) => void; onViewRecipe: (r: Recipe) => void; }
 const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
@@ -861,8 +888,8 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-black text-stone-800">El Recetario 📖</h1>
-          <p className="text-stone-400 text-sm font-medium italic mt-1">Tus mayores éxitos culinarios.</p>
+          <h1 className="text-3xl font-black text-stone-800">Tu Recetario 📖</h1>
+          <p className="text-stone-400 text-sm font-medium italic mt-1">El libro de hechizos del Chef.</p>
         </div>
         {history.length > 0 && (
           <button
@@ -896,41 +923,62 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map((r: any, i: number) => {
-            const realIndex = history.findIndex(h => h.id === r.id || (h.title === r.title && h.date === r.date));
-            return (
-              <div
-                key={r.id || i}
-                onClick={() => onViewRecipe(r)}
-                className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex justify-between items-center hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-300 group animate-fade-slide cursor-pointer hover:-translate-y-1 active:scale-[0.98]"
-                style={{ animationDelay: `${i * 40}ms` }}
-              >
-                <div className="flex-1 pr-4">
-                  <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest block mb-1">{r.date || 'Reciente'}</span>
-                  <h3 className="text-lg font-black text-stone-800 leading-tight mb-2 group-hover:text-teal-600 transition-colors">{r.title}</h3>
-                  <p className="text-xs text-stone-400 font-bold flex items-center gap-1">
-                    <Flame size={12} className="text-orange-400"/> {r.calories} kcal
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-3">
-                  <div className="bg-teal-50 text-teal-600 font-black px-4 py-2 rounded-[1rem] text-sm shadow-sm">
-                    +{r.wasteValue}€
+          {/* 🚀 HIGHLIGHT DE LA ÚLTIMA RECETA */}
+          {filtered.length > 0 && !search && (
+             <div className="mb-6">
+               <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-2 block ml-2">Tu última obra maestra ✨</span>
+               <div 
+                 onClick={() => onViewRecipe(filtered[0])}
+                 className="bg-gradient-to-br from-stone-900 to-stone-800 text-white p-6 rounded-[2rem] shadow-[0_15px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform active:scale-[0.98]"
+               >
+                 <div className="absolute -right-4 -top-4 text-8xl opacity-20 group-hover:scale-110 transition-transform duration-500">
+                   {getEmojiForRecipe(filtered[0].title)}
+                 </div>
+                 <div className="relative z-10">
+                   <h3 className="text-2xl font-black mb-3 pr-10 leading-tight">{filtered[0].title}</h3>
+                   <div className="flex gap-3">
+                     <span className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1"><Clock size={14}/> {filtered[0].time}</span>
+                     <span className="bg-orange-500/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1"><Flame size={14}/> {filtered[0].calories} kcal</span>
+                   </div>
+                 </div>
+               </div>
+             </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4">
+            {filtered.map((r: any, i: number) => {
+              if (!search && i === 0) return null; // Saltamos la primera si ya está destacada
+              const realIndex = history.findIndex(h => h.id === r.id || (h.title === r.title && h.date === r.date));
+              const emoji = getEmojiForRecipe(r.title);
+              
+              return (
+                <div
+                  key={r.id || i}
+                  onClick={() => onViewRecipe(r)}
+                  className="bg-white p-4 rounded-[1.5rem] border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-300 group animate-fade-slide cursor-pointer hover:-translate-y-1 active:scale-[0.98]"
+                  style={{ animationDelay: `${i * 30}ms` }}
+                >
+                  <div className="w-16 h-16 shrink-0 bg-stone-50 rounded-[1.2rem] flex items-center justify-center text-3xl shadow-inner group-hover:bg-teal-50 transition-colors">
+                    {emoji}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex-1 pr-2 min-w-0">
+                    <h3 className="text-base font-black text-stone-800 leading-tight mb-1 truncate group-hover:text-teal-600 transition-colors">{r.title}</h3>
+                    <p className="text-xs text-stone-400 font-bold flex items-center gap-1">
+                      <Clock size={12} className="text-stone-300"/> {r.time} • <Leaf size={12} className="text-teal-400 ml-1"/> +{r.wasteValue}€
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
                     <button 
                       onClick={(e) => { e.stopPropagation(); onDeleteRecipe(realIndex); }}
-                      className="bg-stone-50 p-2 rounded-full text-stone-300 hover:bg-rose-500 hover:text-white transition-all active:scale-90"
+                      className="bg-stone-50 p-2 rounded-xl text-stone-300 hover:bg-rose-500 hover:text-white transition-all active:scale-90"
                     >
-                      <Trash2 size={18}/>
+                      <Trash2 size={16}/>
                     </button>
-                    <div className="bg-stone-50 p-2 rounded-full text-stone-400 group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors">
-                      <ChevronRight size={18}/>
-                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -1101,6 +1149,7 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
   );
 };
 
+// 🚀 REFACTORIZADO: TINDER DE RECETAS EN PLANNER
 interface PlannerProps {
   plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number;
   onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void;
@@ -1115,38 +1164,72 @@ const PlannerView = ({
   batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList, onAlert
 }: PlannerProps) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [lunchAlt, setLunchAlt] = useState(false);
-  const [dinnerAlt, setDinnerAlt] = useState(false);
+  
+  // Estados para el "Tinder" de recetas
+  const [swipePhase, setSwipePhase] = useState<'lunch' | 'dinner' | 'done'>('lunch');
+  const [lunchRejected, setLunchRejected] = useState(false);
+  const [dinnerRejected, setDinnerRejected] = useState(false);
+  const [animationClass, setAnimationClass] = useState('');
 
-  const renderRecipeCard = (title: string, r: any, isAlt: boolean, toggleAlt: () => void, delayIndex: number) => {
+  // Reseteamos el Tinder si hay plan nuevo
+  useEffect(() => {
+    if (plan && plan.type === 'daily') {
+      setSwipePhase('lunch');
+      setLunchRejected(false);
+      setDinnerRejected(false);
+      setAnimationClass('');
+    }
+  }, [plan]);
+
+  const handleSwipe = (direction: 'left' | 'right') => {
+    setAnimationClass(direction === 'left' ? 'animate-swipe-left' : 'animate-swipe-right');
+    
+    setTimeout(() => {
+      if (direction === 'left') {
+        // Rechazo (Paso)
+        if (swipePhase === 'lunch') {
+          if (!lunchRejected && plan?.lunch_alt) setLunchRejected(true);
+          else onAlert("¡Esa era la última opción para comer! Dale a 'Me Enamora' o genera un plan nuevo.");
+        } else {
+          if (!dinnerRejected && plan?.dinner_alt) setDinnerRejected(true);
+          else onAlert("¡Última opción de cena! Acepta o genera magia de nuevo.");
+        }
+      } else {
+        // Acepto (Me enamora)
+        if (swipePhase === 'lunch') setSwipePhase('dinner');
+        else setSwipePhase('done');
+      }
+      setAnimationClass('');
+    }, 400); // Esperar a que acabe la animacion
+  };
+
+  const renderTinderCard = (title: string, r: any) => {
     if (!r) return null;
     return (
-      <div
-        className="bg-white p-7 rounded-[2.5rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.03)] mb-6 relative overflow-hidden group hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] transition-all duration-500 animate-fade-slide hover:-translate-y-1"
-        style={{ animationDelay: `${delayIndex * 100}ms` }}
-      >
-        <div className="flex justify-between items-center mb-6">
-          <span className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em]">{title}</span>
-          <button
-            onClick={toggleAlt}
-            className="text-[10px] font-black bg-stone-50 border border-stone-100 text-stone-500 px-4 py-2 rounded-full flex items-center gap-1.5 active:scale-90 hover:bg-stone-100 transition-all"
-          >
-            <Repeat size={12}/> OTRA OPCIÓN ✨
-          </button>
+      <div className={`bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-[0_20px_50px_rgba(0,0,0,0.08)] relative overflow-hidden flex flex-col items-center text-center ${animationClass}`}>
+        <div className="w-24 h-24 bg-stone-50 rounded-full flex items-center justify-center text-5xl mb-6 shadow-inner">
+          {getEmojiForRecipe(r.title)}
         </div>
-        <div onClick={() => onViewRecipe(r)} className="cursor-pointer">
-          <h3 className="text-3xl font-black text-stone-800 leading-tight mb-4 group-hover:text-teal-600 transition-colors duration-300">{r.title || 'Receta Sorpresa'}</h3>
-          <div className="flex gap-3 mb-5">
-            <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl border border-stone-100">
-              <Clock size={14} className="text-teal-500"/> {r.time || 'Rápido'}
-            </span>
-            <span className="text-xs font-black text-teal-700 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-100">
-              SALVAS: {r.wasteValue || 0}€ 🦸‍♂️
-            </span>
-          </div>
-          <p className="text-sm text-stone-500 font-medium line-clamp-2 italic leading-relaxed">
-            "{r.description || 'Haz click para descubrir la magia...'}"
-          </p>
+        <span className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] mb-2">{title} Propuesta</span>
+        <h3 className="text-3xl font-black text-stone-800 leading-tight mb-4">{r.title}</h3>
+        
+        <div className="flex gap-3 mb-6 justify-center w-full">
+          <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl">
+            <Clock size={14} className="text-teal-500"/> {r.time || 'Rápido'}
+          </span>
+          <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl">
+            <Flame size={14} className="text-orange-500"/> {r.calories || 0} kcal
+          </span>
+        </div>
+        <p className="text-sm text-stone-500 font-medium italic leading-relaxed mb-8 px-4">"{r.description}"</p>
+        
+        <div className="flex gap-4 w-full mt-auto pt-4 border-t border-stone-50">
+          <button onClick={() => handleSwipe('left')} className="flex-1 py-5 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90 transition-all">
+            <XOctagon size={24}/> Paso
+          </button>
+          <button onClick={() => handleSwipe('right')} className="flex-1 py-5 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90 transition-all shadow-[0_10px_20px_rgba(244,63,94,0.3)]">
+            <Heart size={24}/> ¡Lo quiero!
+          </button>
         </div>
       </div>
     );
@@ -1173,7 +1256,6 @@ const PlannerView = ({
           className="bg-white border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] p-5 rounded-[2rem] mb-6 flex justify-between items-center cursor-pointer hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all group active:scale-[0.98]"
         >
           <div>
-            {/* 🚀 TEXTO CLARO */}
             <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">¿Para cuántos preparamos el menú?</p>
             <p className="text-sm text-stone-700 font-bold capitalize">
               {profile.people} pax • {profile.style} • {profile.robot || 'Sartén'}
@@ -1187,7 +1269,7 @@ const PlannerView = ({
 
       {plan && !loading && (
         <button
-          onClick={onReset}
+          onClick={() => { onReset(); setSwipePhase('lunch'); }}
           className="w-full mb-8 py-5 bg-rose-50 text-rose-600 font-black rounded-[1.5rem] hover:bg-rose-100 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
         >
           <Trash2 size={18}/> Empezar de cero
@@ -1206,7 +1288,6 @@ const PlannerView = ({
             >
               Menú del día
             </button>
-            {/* 🚀 BOTÓN BATCHCOOKING CLARO */}
             <button
               onClick={() => setPlanType('batch')}
               className={`flex-1 py-3 text-sm font-black rounded-[1.2rem] transition-all duration-300 flex flex-col items-center justify-center ${
@@ -1265,7 +1346,6 @@ const PlannerView = ({
           )}
 
           <div className="flex gap-3 mb-8">
-            {/* 🚀 BOTONES "PARA TONTOS" */}
             <button
               onClick={() => setMode('aprovechamiento')}
               className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 active:scale-95 ${
@@ -1307,7 +1387,7 @@ const PlannerView = ({
         <div className="space-y-6 animate-in slide-in-from-bottom-8">
           
           {plan.shopping_list && plan.shopping_list.length > 0 && (
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-[2rem] border border-orange-200 shadow-sm flex flex-col items-center text-center animate-fade-slide">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-[2rem] border border-orange-200 shadow-sm flex flex-col items-center text-center mb-6">
               <ShoppingBag className="text-orange-500 mb-3 animate-bounce" size={32}/>
               <h3 className="font-black text-orange-900 text-lg mb-2">Faltan {plan.shopping_list.length} cositas</h3>
               <p className="text-sm text-orange-700 font-medium mb-4">Nuestro Chef virtual dice que necesitarás pasar por el súper para estas recetas.</p>
@@ -1320,47 +1400,65 @@ const PlannerView = ({
             </div>
           )}
 
-          {plan.type === 'batch' ? (
+          {/* LÓGICA DE TINDER SÓLO PARA DAILY PLAN */}
+          {plan.type === 'daily' && swipePhase !== 'done' && (
+             <div className="mt-4">
+               {swipePhase === 'lunch' && renderTinderCard("Tu Comida", lunchRejected ? plan.lunch_alt : plan.lunch)}
+               {swipePhase === 'dinner' && renderTinderCard("Tu Cena", dinnerRejected ? plan.dinner_alt : plan.dinner)}
+             </div>
+          )}
+
+          {/* VISTA FINAL (BATCH O DAILY TERMINADO) */}
+          {(plan.type === 'batch' || swipePhase === 'done') && (
             <>
-              <h3 className="text-2xl font-black text-stone-800 mb-6 px-2 flex items-center gap-2 animate-fade-slide" style={{ animationDelay: '100ms' }}>
-                <Utensils className="text-teal-500"/> Tus Menús Diarios
+              <h3 className="text-2xl font-black text-stone-800 mb-6 px-2 flex items-center gap-2 animate-fade-slide">
+                <Utensils className="text-teal-500"/> ¡Menú de Campeones! 🏆
               </h3>
+              
               <div className="space-y-6 mb-10">
-                {plan.days?.map((day: any, idx: number) => (
+                {(plan.type === 'batch' ? plan.days : [{ day: 1, lunch: lunchRejected ? plan.lunch_alt : plan.lunch, dinner: dinnerRejected ? plan.dinner_alt : plan.dinner }]).map((day: any, idx: number) => (
                   <div
-                    key={day.day}
-                    className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm animate-fade-slide"
-                    style={{ animationDelay: `${(idx + 2) * 100}ms` }}
+                    key={day.day || idx}
+                    className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.04)] animate-fade-slide"
+                    style={{ animationDelay: `${(idx + 1) * 100}ms` }}
                   >
-                    <div className="flex items-center gap-2 mb-5">
-                      <span className="bg-stone-900 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">Día {day.day}</span>
-                    </div>
+                    {plan.type === 'batch' && (
+                      <div className="flex items-center gap-2 mb-5">
+                        <span className="bg-stone-900 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">Día {day.day}</span>
+                      </div>
+                    )}
                     <div className="space-y-3">
                       {day.lunch && (
                         <div
                           onClick={() => onViewRecipe(day.lunch)}
-                          className="p-5 bg-stone-50 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
+                          className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
                         >
-                          <div className="pr-4">
-                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-1">Comida</span>
-                            <h4 className="font-black text-stone-800 text-lg leading-tight group-hover:text-teal-700 transition-colors">{day.lunch.title}</h4>
+                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
+                             {getEmojiForRecipe(day.lunch.title)}
+                           </div>
+                          <div className="flex-1 pr-2">
+                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-0.5">Comida</span>
+                            <h4 className="font-black text-stone-800 text-base leading-tight group-hover:text-teal-600 transition-colors line-clamp-1">{day.lunch.title}</h4>
                           </div>
-                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-teal-50 transition-colors">
-                            <ChevronRight size={20} className="text-stone-400 group-hover:text-teal-600"/>
+                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-teal-50 transition-colors shrink-0">
+                            <ChevronRight size={18} className="text-stone-400 group-hover:text-teal-600"/>
                           </div>
                         </div>
                       )}
                       {day.dinner && (
                         <div
                           onClick={() => onViewRecipe(day.dinner)}
-                          className="p-5 bg-stone-50 rounded-2xl flex justify-between items-center cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
+                          className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
                         >
-                          <div className="pr-4">
-                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-1">Cena</span>
-                            <h4 className="font-black text-stone-800 text-lg leading-tight group-hover:text-teal-700 transition-colors">{day.dinner.title}</h4>
+                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
+                             {getEmojiForRecipe(day.dinner.title)}
+                           </div>
+                          <div className="flex-1 pr-2">
+                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-0.5">Cena</span>
+                            <h4 className="font-black text-stone-800 text-base leading-tight group-hover:text-teal-600 transition-colors line-clamp-1">{day.dinner.title}</h4>
                           </div>
-                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-teal-50 transition-colors">
-                            <ChevronRight size={20} className="text-stone-400 group-hover:text-teal-600"/>
+                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-teal-50 transition-colors shrink-0">
+                            <ChevronRight size={18} className="text-stone-400 group-hover:text-teal-600"/>
                           </div>
                         </div>
                       )}
@@ -1369,53 +1467,50 @@ const PlannerView = ({
                 ))}
               </div>
 
-              <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-[0_10px_40px_rgba(0,0,0,0.05)] mb-8 animate-fade-slide" style={{ animationDelay: '500ms' }}>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-orange-100 p-3 rounded-2xl"><ListChecks className="text-orange-500" size={28}/></div>
-                  <h2 className="text-2xl font-black text-stone-900">Plan de Ataque ⚔️</h2>
-                </div>
-                <p className="text-stone-600 font-medium mb-8 leading-relaxed italic border-l-4 border-orange-300 pl-4 bg-orange-50/50 py-2 rounded-r-xl">
-                  {plan.batch_masterclass?.intro || "¡Vamos a cocinar todo de golpe para descansar el resto de la semana como reyes!"}
-                </p>
-                
-                <div className="space-y-6">
-                  {plan.batch_masterclass?.step_by_step?.map((phase: any, idx: number) => (
-                    <div key={idx} className="bg-stone-50 p-6 rounded-2xl border border-stone-100 shadow-sm">
-                      <h4 className="font-black text-stone-800 text-lg mb-4 flex items-center gap-2">
-                        <ChefHat size={20} className="text-teal-500"/> {phase.phase}
-                      </h4>
-                      <ul className="space-y-3">
-                        {phase.tasks.map((t: string, i: number) => (
-                          <li key={i} className="flex items-start gap-3 bg-white p-4 rounded-[1.2rem] shadow-sm">
-                            <div className="mt-1.5 w-2 h-2 bg-stone-800 rounded-full shrink-0"></div>
-                            <span className="text-sm font-medium text-stone-700 leading-snug">{t}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-8 bg-teal-50/50 p-6 rounded-2xl border border-teal-100 shadow-sm">
-                  <h4 className="font-black text-teal-900 text-lg mb-4 flex items-center gap-2">
-                    <ThermometerSnowflake size={20} className="text-teal-500"/> Organización 🍱
-                  </h4>
-                  <ul className="space-y-3">
-                    {(plan.batch_masterclass?.storage_tips || []).map((tip: string, i: number) => (
-                      <li key={i} className="flex items-start gap-3 bg-white p-4 rounded-[1.2rem] shadow-sm border border-teal-50">
-                        <div className="mt-1.5 w-2 h-2 bg-teal-500 rounded-full shrink-0"></div>
-                        <span className="text-sm font-bold text-teal-800 leading-snug">{tip}</span>
-                      </li>
+              {plan.type === 'batch' && (
+                <div className="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-[0_10px_40px_rgba(0,0,0,0.05)] mb-8 animate-fade-slide">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="bg-orange-100 p-3 rounded-2xl"><ListChecks className="text-orange-500" size={28}/></div>
+                    <h2 className="text-2xl font-black text-stone-900">Plan de Ataque ⚔️</h2>
+                  </div>
+                  <p className="text-stone-600 font-medium mb-8 leading-relaxed italic border-l-4 border-orange-300 pl-4 bg-orange-50/50 py-2 rounded-r-xl">
+                    {plan.batch_masterclass?.intro || "¡Vamos a cocinar todo de golpe para descansar el resto de la semana como reyes!"}
+                  </p>
+                  
+                  <div className="space-y-6">
+                    {plan.batch_masterclass?.step_by_step?.map((phase: any, idx: number) => (
+                      <div key={idx} className="bg-stone-50 p-6 rounded-2xl border border-stone-100 shadow-sm">
+                        <h4 className="font-black text-stone-800 text-lg mb-4 flex items-center gap-2">
+                          <ChefHat size={20} className="text-teal-500"/> {phase.phase}
+                        </h4>
+                        <ul className="space-y-3">
+                          {phase.tasks.map((t: string, i: number) => (
+                            <li key={i} className="flex items-start gap-3 bg-white p-4 rounded-[1.2rem] shadow-sm">
+                              <div className="mt-1.5 w-2 h-2 bg-stone-800 rounded-full shrink-0"></div>
+                              <span className="text-sm font-medium text-stone-700 leading-snug">{t}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+
+                  <div className="mt-8 bg-teal-50/50 p-6 rounded-2xl border border-teal-100 shadow-sm">
+                    <h4 className="font-black text-teal-900 text-lg mb-4 flex items-center gap-2">
+                      <ThermometerSnowflake size={20} className="text-teal-500"/> Organización 🍱
+                    </h4>
+                    <ul className="space-y-3">
+                      {(plan.batch_masterclass?.storage_tips || []).map((tip: string, i: number) => (
+                        <li key={i} className="flex items-start gap-3 bg-white p-4 rounded-[1.2rem] shadow-sm border border-teal-50">
+                          <div className="mt-1.5 w-2 h-2 bg-teal-500 rounded-full shrink-0"></div>
+                          <span className="text-sm font-bold text-teal-800 leading-snug">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
-          ) : (
-            <div className="space-y-6">
-              {renderRecipeCard("Almuerzo", lunchAlt ? plan.lunch_alt : plan.lunch, lunchAlt, () => setLunchAlt(!lunchAlt), 1)}
-              {renderRecipeCard("Cena", dinnerAlt ? plan.dinner_alt : plan.dinner, dinnerAlt, () => setDinnerAlt(!dinnerAlt), 2)}
-            </div>
           )}
         </div>
       )}
@@ -1618,6 +1713,11 @@ export default function App() {
 
   const [savings, setSavings] = useState(() => parseFloat(localStorage.getItem('platoplan_savings') || '0'));
   const [wasteSaved, setWasteSaved] = useState(() => parseFloat(localStorage.getItem('platoplan_waste') || '0'));
+  
+  // 🚀 ESTADOS DE GAMIFICACIÓN (RACHAS)
+  const [streak, setStreak] = useState(() => parseInt(localStorage.getItem('platoplan_streak') || '0'));
+  const [lastCookDate, setLastCookDate] = useState(() => localStorage.getItem('platoplan_last_cook') || '');
+
   const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
     try { return JSON.parse(localStorage.getItem('platoplan_pantry') || '[]'); } catch (e) { return []; }
   });
@@ -1715,6 +1815,7 @@ export default function App() {
         setProfile({ ...p, allergies: safeAlg });
         setSavings(p.savings || 0);
         setWasteSaved(p.waste_saved || 0);
+        // En un backend real también traeríamos el streak de la DB aquí
         if (!localProfileStr) navigateTo('dashboard');
       } else if (localProfileStr) {
         const localProfile = JSON.parse(localProfileStr);
@@ -1889,6 +1990,23 @@ export default function App() {
 
   const handleCookDone = useCallback(async (consumed: string[]) => {
     if (selectedRecipe) {
+      // 🚀 LÓGICA DE GAMIFICACIÓN: CÁLCULO DE RACHAS
+      const today = new Date().toDateString();
+      let newStreak = streak;
+      if (lastCookDate !== today) {
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (lastCookDate === yesterday.toDateString()) {
+           newStreak += 1; // Cocinó ayer y hoy, la racha sube
+        } else {
+           newStreak = 1; // Empezamos de cero
+        }
+        setStreak(newStreak);
+        setLastCookDate(today);
+        localStorage.setItem('platoplan_streak', newStreak.toString());
+        localStorage.setItem('platoplan_last_cook', today);
+      }
+
       const newSavings = savings + Math.max(0, (15 * profile.people) - (selectedRecipe.priceEstimate || 0));
       const newWaste = wasteSaved + (selectedRecipe.wasteValue || 0);
       
@@ -1924,10 +2042,10 @@ export default function App() {
       setShowConfirm(false);
       setSelectedRecipe(null);
       localStorage.removeItem('platoplan_selected_recipe');
-      setAlertMessage("¡Receta completada! Hemos sumado tu ahorro a la Hucha Feliz. 🐷💸");
+      setAlertMessage(newStreak > 1 ? `¡BOOM! Sumas ahorro y tu racha sube a ${newStreak} días seguidos 🔥🐷` : "¡Receta completada! Hemos sumado tu ahorro a la Hucha Feliz. 🐷💸");
       navigateTo('dashboard'); 
     }
-  }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo]);
+  }, [selectedRecipe, savings, wasteSaved, history, ingredients, profile, user, updatePantry, navigateTo, streak, lastCookDate]);
 
   const handleAddMissingToShoppingList = useCallback((missingItems: string[]) => {
     if (!missingItems || missingItems.length === 0) return;
@@ -2020,11 +2138,7 @@ export default function App() {
 
   if (view === 'auth') return <AuthView onAlert={setAlertMessage} />;
   if (view === 'onboarding') return (
-    <OnboardingView
-      profile={profile}
-      setProfile={setProfile}
-      onComplete={() => { saveProfileCloud(profile); navigateTo('dashboard'); }}
-    />
+    <OnboardingView onComplete={() => { saveProfileCloud(profile); navigateTo('dashboard'); }} />
   );
 
   const urgentCount = ingredients.filter(i => i.expiryStatus === 'urgent').length;
@@ -2050,6 +2164,7 @@ export default function App() {
             profileName={profile.name}
             urgentCount={urgentCount}
             onViewPantry={() => navigateTo('pantry')}
+            streak={streak}
           />
         )}
         {view === 'pantry' && (
@@ -2127,9 +2242,10 @@ export default function App() {
         />
       )}
 
+      {/* 🚀 NAVBAR PREMIUM GLASSMORPHISM: REPARADO EL FONDO TRANSPARENTE */}
       {view !== 'recipe-detail' && (
         <div
-          className="glass-nav border-t border-stone-200/50 px-4 py-3 flex justify-between items-center z-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.06)]"
+          className="glass-nav border-t border-stone-200 px-4 py-3 flex justify-between items-center z-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.06)]"
           style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
         >
           <button
@@ -2154,7 +2270,7 @@ export default function App() {
           <button
             onClick={() => navigateTo('planner')}
             className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-full -mt-6 shadow-lg transition-all duration-300 active:scale-90 border-4 border-[#FDFBF7] ${
-              view === 'planner' ? 'bg-[#5CB82C] text-white shadow-[#5CB82C]/40' : 'bg-stone-800 text-white hover:bg-black hover:shadow-xl'
+              view === 'planner' ? 'bg-[#5CB82C] text-white shadow-[0_10px_20px_rgba(92,184,44,0.4)]' : 'bg-stone-800 text-white hover:bg-black hover:shadow-xl'
             }`}
           >
             <ChefHat size={26} strokeWidth={2.5} className={view === 'planner' ? 'animate-wiggle' : ''}/>
