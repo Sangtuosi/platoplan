@@ -69,13 +69,12 @@ const CustomStyles = () => (
     @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4); } 50% { box-shadow: 0 0 20px 10px rgba(20, 184, 166, 0); } }
     .animate-pulse-glow { animation: pulseGlow 2s infinite; }
 
-    .progress-bar-stripes { background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: progress-stripes 1s linear infinite; }
+    .progress-bar-stripes { background-image: linear-gradient(45deg, rgba(255,255,255,.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.2) 50%, rgba(255,255,255,.2) 75%, transparent 75%, transparent); background-size: 1rem 1rem; animation: progress-stripes 1s linear infinite; }
     @keyframes progress-stripes { from { background-position: 1rem 0; } to { background-position: 0 0; } }
     
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    /* Navbar Blindada Anti-Transparencias */
     .glass-nav { background: rgba(253, 251, 247, 0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     .glass-modal { background: rgba(253, 251, 247, 0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
   `}} />
@@ -85,17 +84,17 @@ const CustomStyles = () => (
 const getEmojiForRecipe = (title: string) => {
   const t = (title || "").toLowerCase();
   if (t.includes('pollo')) return '🍗';
-  if (t.includes('ensalada') || t.includes('verdura') || t.includes('verde')) return '🥗';
+  if (t.includes('ensalada') || t.includes('verdura') || t.includes('verde') || t.includes('calabacín')) return '🥗';
   if (t.includes('pasta') || t.includes('macarrones') || t.includes('espagueti')) return '🍝';
   if (t.includes('arroz') || t.includes('paella') || t.includes('risotto')) return '🥘';
   if (t.includes('pescado') || t.includes('salmón') || t.includes('atún') || t.includes('merluza')) return '🐟';
   if (t.includes('huevo') || t.includes('tortilla') || t.includes('revuelto')) return '🍳';
-  if (t.includes('sopa') || t.includes('crema') || t.includes('puré')) return '🥣';
-  if (t.includes('carne') || t.includes('ternera') || t.includes('cerdo') || t.includes('hamburguesa')) return '🥩';
+  if (t.includes('sopa') || t.includes('crema') || t.includes('puré') || t.includes('caldo')) return '🥣';
+  if (t.includes('carne') || t.includes('ternera') || t.includes('cerdo') || t.includes('hamburguesa') || t.includes('lomo')) return '🥩';
   if (t.includes('pizza') || t.includes('masa')) return '🍕';
   if (t.includes('taco') || t.includes('fajita') || t.includes('burrito')) return '🌮';
   if (t.includes('patata') || t.includes('frita')) return '🍟';
-  if (t.includes('postre') || t.includes('dulce') || t.includes('tarta')) return '🍰';
+  if (t.includes('postre') || t.includes('dulce') || t.includes('tarta') || t.includes('bizcocho')) return '🍰';
   return '🍽️'; 
 };
 
@@ -104,7 +103,8 @@ type ExpiryStatus = 'fresh' | 'soon' | 'urgent';
 type IngredientCat = 'veg' | 'protein' | 'dairy' | 'pantry';
 
 interface Ingredient { id: string; name: string; quantity: string; expiryStatus: ExpiryStatus; category: IngredientCat; }
-interface Recipe { id?: string; title: string; description: string; time: string; calories: number; ingredients: string[]; steps: string[]; priceEstimate: number; wasteValue: number; date?: string; }
+// 🚀 NUEVO: AÑADIDO health_benefit AL ESQUEMA
+interface Recipe { id?: string; title: string; description: string; health_benefit?: string; time: string; calories: number; ingredients: string[]; steps: string[]; priceEstimate: number; wasteValue: number; date?: string; }
 interface BatchMasterclass { intro: string; storage_tips: string[]; step_by_step: { phase: string; tasks: string[] }[]; }
 interface MealPlan { type: 'daily' | 'batch'; lunch?: Recipe; lunch_alt?: Recipe; dinner?: Recipe; dinner_alt?: Recipe; days?: { day: number; lunch: Recipe; dinner: Recipe }[]; batch_masterclass?: BatchMasterclass; shopping_list?: string[]; }
 interface UserProfile { name: string; style: string; allergies: string[]; people: number; ages: string; robot: string; }
@@ -230,13 +230,15 @@ const generateRealPlan = async (
         CRÍTICO: El campo 'wasteValue' NUNCA puede ser 0. Debes asignar un valor estimado (Ej: 3.50) que represente el dinero salvado.`
       : `Estás en MODO CHEF. Libertad creativa. Puedes añadir ingredientes a la 'shopping_list' si es necesario. wasteValue puede ser bajo o 0.`;
 
+    // 🚀 LÓGICA DE CENAS LIGERAS Y BENEFICIOS
     const commonRules = `
       REGLAS GENERALES ESTRICTAS:
       1. GRAMOS EXACTOS. Adapta todo para ${profile.people} personas (${profile.ages}).
       2. Adapta los pasos a: ${profile.robot || 'olla/sartén'}.
       3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua o especias en la 'shopping_list'.
-      4. TONO: Descripciones muy creativas, divertidas, emocionantes y muy cálidas, como si un chef famoso te estuviera animando.
-      5. REGLA DE COMPRA: En 'shopping_list', usa SIEMPRE UNIDADES MÉTRICAS ESTÁNDAR (g o ml). ESTÁ ESTRICTAMENTE PROHIBIDO usar "ud", "unidades", "piezas". 
+      4. TONO: Descripciones muy creativas, divertidas y mágicas.
+      5. REGLA DE CENAS LIGERAS: Las recetas asignadas a 'dinner' o 'dinner_alt' DEBEN SER CENAS MUY LIGERAS (ensaladas, pescado, tortillas, cremas). PROHIBIDO estofados, legumbres pesadas o grandes platos de pasta por la noche.
+      6. BENEFICIO DE SALUD: Llena el campo 'health_benefit' con una frase súper corta y atractiva sobre los beneficios de este plato para el cuerpo (Ej: "Proteína pura para tus músculos 💪", o "Muy ligero para dormir del tirón 🌙").
     `;
 
     if (planType === 'daily') {
@@ -256,7 +258,7 @@ const generateRealPlan = async (
       INGREDIENTES EN NEVERA: ${context}.
       ${taskPrompt}
       ${commonRules}
-      Formato interno de Recipe: {"title":"", "description":"", "time":"", "calories":0, "ingredients":[""], "steps":[""], "priceEstimate":0, "wasteValue":0}
+      Formato interno de Recipe: {"title":"", "description":"", "health_benefit":"", "time":"", "calories":0, "ingredients":[""], "steps":[""], "priceEstimate":0, "wasteValue":0}
     `;
 
     const result = await model.generateContent(basePrompt + "\n" + jsonSchema);
@@ -379,8 +381,11 @@ const PsychologicalLoader = ({ startTime, mode = 'recipe' }: { startTime: number
         <div className="h-3 bg-stone-100 rounded-full w-4/6 mx-auto animate-pulse" style={{animationDelay: '300ms'}}></div>
       </div>
 
+      {/* 🚀 ARREGLADA LA BARRA DE CARGA */}
       <div className="w-4/5 mx-auto bg-stone-100 h-3 rounded-full overflow-hidden shadow-inner relative">
-        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-300 ease-out progress-bar-stripes" style={{width: `${Math.min(progress, 98)}%`}}></div>
+        <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-300 ease-out" style={{width: `${Math.min(progress, 98)}%`}}>
+           <div className="w-full h-full progress-bar-stripes opacity-50"></div>
+        </div>
       </div>
     </div>
   );
@@ -507,7 +512,6 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
   );
 };
 
-// 🚀 REFACTORIZADO DASHBOARD: AÑADIDAS LAS RACHAS DE FUEGO 🔥
 interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; streak: number; }
 const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry, streak }: DashboardProps) => {
   const level = useMemo(() => {
@@ -554,7 +558,6 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
           <p className="text-stone-400 text-sm font-bold mt-1">{randomGreeting}</p>
         </div>
         <div className="flex flex-col items-end">
-           {/* 🚀 EL FUEGO DE LAS RACHAS */}
            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-100 shadow-sm ${streak > 0 ? 'bg-orange-50 text-orange-600' : 'bg-stone-50 text-stone-400'}`}>
               <Flame size={16} className={streak > 0 ? 'animate-pulse' : ''} />
               <span className="font-black text-sm">{streak} Días</span>
@@ -875,7 +878,6 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   );
 };
 
-// 🚀 REFACTORIZADO: RECETARIO NIVEL DIOS (LIBRO DE HECHIZOS)
 interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRecipe: (index: number) => void; onViewRecipe: (r: Recipe) => void; }
 const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
@@ -923,7 +925,6 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
         </div>
       ) : (
         <div className="space-y-4">
-          {/* 🚀 HIGHLIGHT DE LA ÚLTIMA RECETA */}
           {filtered.length > 0 && !search && (
              <div className="mb-6">
                <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-2 block ml-2">Tu última obra maestra ✨</span>
@@ -947,7 +948,7 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
 
           <div className="grid grid-cols-1 gap-4">
             {filtered.map((r: any, i: number) => {
-              if (!search && i === 0) return null; // Saltamos la primera si ya está destacada
+              if (!search && i === 0) return null; 
               const realIndex = history.findIndex(h => h.id === r.id || (h.title === r.title && h.date === r.date));
               const emoji = getEmojiForRecipe(r.title);
               
@@ -1149,7 +1150,7 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
   );
 };
 
-// 🚀 REFACTORIZADO: TINDER DE RECETAS EN PLANNER
+// 🚀 REFACTORIZADO: TINDER DE RECETAS EN PLANNER + PASOS UI
 interface PlannerProps {
   plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number;
   onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void;
@@ -1165,13 +1166,11 @@ const PlannerView = ({
 }: PlannerProps) => {
   const [showSettings, setShowSettings] = useState(false);
   
-  // Estados para el "Tinder" de recetas
   const [swipePhase, setSwipePhase] = useState<'lunch' | 'dinner' | 'done'>('lunch');
   const [lunchRejected, setLunchRejected] = useState(false);
   const [dinnerRejected, setDinnerRejected] = useState(false);
   const [animationClass, setAnimationClass] = useState('');
 
-  // Reseteamos el Tinder si hay plan nuevo
   useEffect(() => {
     if (plan && plan.type === 'daily') {
       setSwipePhase('lunch');
@@ -1186,7 +1185,6 @@ const PlannerView = ({
     
     setTimeout(() => {
       if (direction === 'left') {
-        // Rechazo (Paso)
         if (swipePhase === 'lunch') {
           if (!lunchRejected && plan?.lunch_alt) setLunchRejected(true);
           else onAlert("¡Esa era la última opción para comer! Dale a 'Me Enamora' o genera un plan nuevo.");
@@ -1195,12 +1193,11 @@ const PlannerView = ({
           else onAlert("¡Última opción de cena! Acepta o genera magia de nuevo.");
         }
       } else {
-        // Acepto (Me enamora)
         if (swipePhase === 'lunch') setSwipePhase('dinner');
         else setSwipePhase('done');
       }
       setAnimationClass('');
-    }, 400); // Esperar a que acabe la animacion
+    }, 400); 
   };
 
   const renderTinderCard = (title: string, r: any) => {
@@ -1213,7 +1210,7 @@ const PlannerView = ({
         <span className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] mb-2">{title} Propuesta</span>
         <h3 className="text-3xl font-black text-stone-800 leading-tight mb-4">{r.title}</h3>
         
-        <div className="flex gap-3 mb-6 justify-center w-full">
+        <div className="flex gap-3 mb-4 justify-center w-full">
           <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl">
             <Clock size={14} className="text-teal-500"/> {r.time || 'Rápido'}
           </span>
@@ -1221,7 +1218,15 @@ const PlannerView = ({
             <Flame size={14} className="text-orange-500"/> {r.calories || 0} kcal
           </span>
         </div>
-        <p className="text-sm text-stone-500 font-medium italic leading-relaxed mb-8 px-4">"{r.description}"</p>
+
+        {/* 🚀 NUEVO: EL BENEFICIO EN LA TARJETA */}
+        {r.health_benefit && (
+          <div className="mb-6 px-4 py-2 bg-teal-50/50 rounded-xl border border-teal-100">
+            <p className="text-xs font-black text-teal-700">{r.health_benefit}</p>
+          </div>
+        )}
+
+        <p className="text-sm text-stone-500 font-medium italic leading-relaxed mb-8 px-4 line-clamp-3">"{r.description}"</p>
         
         <div className="flex gap-4 w-full mt-auto pt-4 border-t border-stone-50">
           <button onClick={() => handleSwipe('left')} className="flex-1 py-5 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90 transition-all">
@@ -1251,20 +1256,18 @@ const PlannerView = ({
           onAlert={onAlert}
         />
       ) : (
-        <div
-          onClick={() => setShowSettings(true)}
-          className="bg-white border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] p-5 rounded-[2rem] mb-6 flex justify-between items-center cursor-pointer hover:shadow-[0_8px_25px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all group active:scale-[0.98]"
-        >
-          <div>
-            <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">¿Para cuántos preparamos el menú?</p>
-            <p className="text-sm text-stone-700 font-bold capitalize">
-              {profile.people} pax • {profile.style} • {profile.robot || 'Sartén'}
+        !plan && !loading && (
+          <div className="mb-8 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 1</span>
+              <button onClick={() => setShowSettings(true)} className="text-xs font-bold text-stone-400 underline">Editar</button>
+            </div>
+            <h3 className="font-black text-stone-800 mb-1">¿Para quién cocinamos?</h3>
+            <p className="text-sm text-stone-500 font-medium capitalize">
+              {profile.people} personas • Dieta {profile.style}
             </p>
           </div>
-          <div className="bg-stone-50 p-3 rounded-full group-hover:bg-teal-50 group-hover:text-teal-600 transition-colors">
-            <Settings2 size={20}/>
-          </div>
-        </div>
+        )
       )}
 
       {plan && !loading && (
@@ -1279,7 +1282,11 @@ const PlannerView = ({
       {!plan && !loading && !showSettings && (
         <div className="animate-in slide-in-from-bottom-8 duration-500">
           
-          <div className="bg-stone-100/80 p-1.5 rounded-[1.5rem] flex mb-6 shadow-inner">
+          <div className="mb-2 flex items-center gap-2">
+             <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 2</span>
+             <h3 className="font-black text-stone-800">¿Qué menú te preparo?</h3>
+          </div>
+          <div className="bg-stone-100/80 p-1.5 rounded-[1.5rem] flex mb-8 shadow-inner">
             <button
               onClick={() => setPlanType('daily')}
               className={`flex-1 py-4 text-sm font-black rounded-[1.2rem] transition-all duration-300 ${
@@ -1300,9 +1307,9 @@ const PlannerView = ({
           </div>
 
           {planType === 'batch' && (
-            <div className="bg-white p-6 rounded-[2rem] border border-stone-100 mb-6 shadow-sm animate-in zoom-in-95 duration-300">
+            <div className="bg-white p-6 rounded-[2rem] border border-stone-100 mb-8 shadow-sm animate-in zoom-in-95 duration-300">
               <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                <CalendarDays size={16} className="text-orange-500"/> 1. ¿Cuántos días te resuelvo?
+                <CalendarDays size={16} className="text-orange-500"/> ¿Cuántos días te resuelvo?
               </p>
               <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
                 {[2, 3, 4, 5, 6, 7].map(d => (
@@ -1320,7 +1327,7 @@ const PlannerView = ({
                 ))}
               </div>
               <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                <Utensils size={16} className="text-teal-500"/> 2. ¿Para qué comidas?
+                <Utensils size={16} className="text-teal-500"/> ¿Para qué comidas?
               </p>
               <div className="flex gap-3">
                 {['lunch', 'dinner'].map((m: any) => (
@@ -1345,6 +1352,10 @@ const PlannerView = ({
             </div>
           )}
 
+          <div className="mb-2 flex items-center gap-2">
+             <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 3</span>
+             <h3 className="font-black text-stone-800">Elige la Magia</h3>
+          </div>
           <div className="flex gap-3 mb-8">
             <button
               onClick={() => setMode('aprovechamiento')}
@@ -1355,7 +1366,7 @@ const PlannerView = ({
               }`}
             >
               <span className="flex items-center gap-1.5 text-sm"><Leaf size={20} className={mode === 'aprovechamiento' ? 'animate-wiggle' : ''}/> CERO SOBRAS</span>
-              <span className="text-[10px] font-bold opacity-60">Usa solo lo que tienes</span>
+              <span className="text-[10px] font-bold opacity-60">Usa solo lo de tu nevera</span>
             </button>
             <button
               onClick={() => setMode('chef')}
@@ -1366,7 +1377,7 @@ const PlannerView = ({
               }`}
             >
               <span className="flex items-center gap-1.5 text-sm"><Sparkles size={20} className={mode === 'chef' ? 'animate-pulse' : ''}/> MODO CHEF</span>
-              <span className="text-[10px] font-bold opacity-60">Recetas con libertad</span>
+              <span className="text-[10px] font-bold opacity-60">IA con libertad creativa</span>
             </button>
           </div>
           
@@ -1403,8 +1414,8 @@ const PlannerView = ({
           {/* LÓGICA DE TINDER SÓLO PARA DAILY PLAN */}
           {plan.type === 'daily' && swipePhase !== 'done' && (
              <div className="mt-4">
-               {swipePhase === 'lunch' && renderTinderCard("Tu Comida", lunchRejected ? plan.lunch_alt : plan.lunch)}
-               {swipePhase === 'dinner' && renderTinderCard("Tu Cena", dinnerRejected ? plan.dinner_alt : plan.dinner)}
+               {swipePhase === 'lunch' && renderTinderCard("Tu Comida", lunchRejected ? (plan.lunch_alt || plan.lunch) : plan.lunch)}
+               {swipePhase === 'dinner' && renderTinderCard("Tu Cena", dinnerRejected ? (plan.dinner_alt || plan.dinner) : plan.dinner)}
              </div>
           )}
 
@@ -1416,7 +1427,7 @@ const PlannerView = ({
               </h3>
               
               <div className="space-y-6 mb-10">
-                {(plan.type === 'batch' ? plan.days : [{ day: 1, lunch: lunchRejected ? plan.lunch_alt : plan.lunch, dinner: dinnerRejected ? plan.dinner_alt : plan.dinner }]).map((day: any, idx: number) => (
+                {(plan.type === 'batch' ? plan.days : [{ day: 1, lunch: lunchRejected ? (plan.lunch_alt || plan.lunch) : plan.lunch, dinner: dinnerRejected ? (plan.dinner_alt || plan.dinner) : plan.dinner }]).map((day: any, idx: number) => (
                   <div
                     key={day.day || idx}
                     className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.04)] animate-fade-slide"
@@ -1428,9 +1439,10 @@ const PlannerView = ({
                       </div>
                     )}
                     <div className="space-y-3">
+                      {/* 🚀 BUG DE PANTALLA BLANCA RESUELTO: Solo abre receta si existe (day.lunch) */}
                       {day.lunch && (
                         <div
-                          onClick={() => onViewRecipe(day.lunch)}
+                          onClick={() => day.lunch && onViewRecipe(day.lunch)}
                           className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
                         >
                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
@@ -1447,7 +1459,7 @@ const PlannerView = ({
                       )}
                       {day.dinner && (
                         <div
-                          onClick={() => onViewRecipe(day.dinner)}
+                          onClick={() => day.dinner && onViewRecipe(day.dinner)}
                           className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
                         >
                            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
@@ -1530,10 +1542,10 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
   const shareRecipe = () => {
     const ingText = safeIngredients.map(i => `🔸 ${typeof i === 'string' ? i : (i as any).name}`).join('\n');
     const stepText = safeSteps.map((s, i) => `*${i+1}.* ${s}`).join('\n\n');
-    const txt = `✨ *PlatoPlan presenta:* ✨\n\n🍽️ *${recipe.title}*\n⏱️ ${recipe.time || 'Rápido'} | 🔥 ${recipe.calories || 0} kcal | 💰 Ahorro: ${recipe.wasteValue || 0}€\n\n🛒 *INGREDIENTES:*\n${ingText}\n\n👨‍🍳 *ELABORACIÓN:*\n${stepText}\n\n👇 *¿Tú también quieres cocinar sin estrés y ahorrar dinero?*\nÚnete a PlatoPlan y haz magia con tu nevera: https://platoplan.vercel.app`;
+    const txt = `✨ *PlatoPlan presenta:* ✨\n\n🍽️ *${recipe?.title}*\n⏱️ ${recipe?.time || 'Rápido'} | 🔥 ${recipe?.calories || 0} kcal | 💰 Ahorro: ${recipe?.wasteValue || 0}€\n\n🛒 *INGREDIENTES:*\n${ingText}\n\n👨‍🍳 *ELABORACIÓN:*\n${stepText}\n\n👇 *¿Tú también quieres cocinar sin estrés y ahorrar dinero?*\nÚnete a PlatoPlan y haz magia con tu nevera: https://platoplan.vercel.app`;
     
     if (navigator.share) {
-      navigator.share({ title: `Receta PlatoPlan: ${recipe.title}`, text: txt }).catch(console.error);
+      navigator.share({ title: `Receta PlatoPlan: ${recipe?.title}`, text: txt }).catch(console.error);
     } else {
       const dummy = document.createElement("textarea");
       document.body.appendChild(dummy);
@@ -1563,7 +1575,7 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
       
       <h1 className="text-4xl font-black mb-6 leading-tight text-stone-900 tracking-tighter drop-shadow-sm">{recipe?.title}</h1>
       
-      <div className="flex flex-wrap gap-3 mb-10">
+      <div className="flex flex-wrap gap-3 mb-6">
         <span className="bg-white border border-stone-100 px-4 py-2.5 rounded-[1rem] font-bold text-sm flex items-center gap-2 text-stone-700 shadow-sm">
           <Clock size={16} className="text-teal-500"/> {recipe?.time || '30m'}
         </span>
@@ -1574,8 +1586,15 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
           <Leaf size={16}/> Salvas {recipe?.wasteValue || 0}€
         </span>
       </div>
+
+      {/* 🚀 NUEVO: EL BENEFICIO EN LA VISTA DE LA RECETA */}
+      {recipe?.health_benefit && (
+        <div className="mb-10 px-5 py-4 bg-teal-50 rounded-[1.5rem] border border-teal-100 shadow-sm animate-fade-slide">
+          <p className="text-sm font-black text-teal-800 leading-snug">{recipe.health_benefit}</p>
+        </div>
+      )}
       
-      <div className="mb-10 bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.03)] animate-fade-slide">
+      <div className="mb-10 bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.03)] animate-fade-slide" style={{ animationDelay: '50ms' }}>
         <h3 className="font-black text-2xl mb-6 flex items-center gap-2 text-stone-800">
           <Scale className="text-orange-500"/> Ingredientes
         </h3>
@@ -1714,7 +1733,6 @@ export default function App() {
   const [savings, setSavings] = useState(() => parseFloat(localStorage.getItem('platoplan_savings') || '0'));
   const [wasteSaved, setWasteSaved] = useState(() => parseFloat(localStorage.getItem('platoplan_waste') || '0'));
   
-  // 🚀 ESTADOS DE GAMIFICACIÓN (RACHAS)
   const [streak, setStreak] = useState(() => parseInt(localStorage.getItem('platoplan_streak') || '0'));
   const [lastCookDate, setLastCookDate] = useState(() => localStorage.getItem('platoplan_last_cook') || '');
 
@@ -1815,7 +1833,6 @@ export default function App() {
         setProfile({ ...p, allergies: safeAlg });
         setSavings(p.savings || 0);
         setWasteSaved(p.waste_saved || 0);
-        // En un backend real también traeríamos el streak de la DB aquí
         if (!localProfileStr) navigateTo('dashboard');
       } else if (localProfileStr) {
         const localProfile = JSON.parse(localProfileStr);
@@ -1990,16 +2007,15 @@ export default function App() {
 
   const handleCookDone = useCallback(async (consumed: string[]) => {
     if (selectedRecipe) {
-      // 🚀 LÓGICA DE GAMIFICACIÓN: CÁLCULO DE RACHAS
       const today = new Date().toDateString();
       let newStreak = streak;
       if (lastCookDate !== today) {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         if (lastCookDate === yesterday.toDateString()) {
-           newStreak += 1; // Cocinó ayer y hoy, la racha sube
+           newStreak += 1; 
         } else {
-           newStreak = 1; // Empezamos de cero
+           newStreak = 1; 
         }
         setStreak(newStreak);
         setLastCookDate(today);
@@ -2242,7 +2258,6 @@ export default function App() {
         />
       )}
 
-      {/* 🚀 NAVBAR PREMIUM GLASSMORPHISM: REPARADO EL FONDO TRANSPARENTE */}
       {view !== 'recipe-detail' && (
         <div
           className="glass-nav border-t border-stone-200 px-4 py-3 flex justify-between items-center z-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.06)]"
