@@ -103,7 +103,6 @@ type ExpiryStatus = 'fresh' | 'soon' | 'urgent';
 type IngredientCat = 'veg' | 'protein' | 'dairy' | 'pantry';
 
 interface Ingredient { id: string; name: string; quantity: string; expiryStatus: ExpiryStatus; category: IngredientCat; }
-// 🚀 NUEVO: AÑADIDO health_benefit AL ESQUEMA
 interface Recipe { id?: string; title: string; description: string; health_benefit?: string; time: string; calories: number; ingredients: string[]; steps: string[]; priceEstimate: number; wasteValue: number; date?: string; }
 interface BatchMasterclass { intro: string; storage_tips: string[]; step_by_step: { phase: string; tasks: string[] }[]; }
 interface MealPlan { type: 'daily' | 'batch'; lunch?: Recipe; lunch_alt?: Recipe; dinner?: Recipe; dinner_alt?: Recipe; days?: { day: number; lunch: Recipe; dinner: Recipe }[]; batch_masterclass?: BatchMasterclass; shopping_list?: string[]; }
@@ -169,7 +168,7 @@ const scanIngredientsFromImage = async (apiKey: string, base64Image: string, mim
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const prompt = `Eres una IA experta en nutrición y lectura de datos. Analiza esta imagen (puede ser un ticket de supermercado o una foto de una nevera/comida).
+    const prompt = `Eres un Asistente experto en nutrición y lectura de datos. Analiza esta imagen (puede ser un ticket de supermercado o una foto de una nevera/comida).
     Tus reglas:
     1. Extrae SOLO los ingredientes o alimentos. Puedes entender varios idiomas (Catalán, Español, etc) pero debes traducirlo todo al ESPAÑOL ESTÁNDAR.
     2. Ignora completamente precios, marcas, cantidades complejas, fechas, papel higiénico, productos de limpieza u objetos que no se comen.
@@ -230,15 +229,15 @@ const generateRealPlan = async (
         CRÍTICO: El campo 'wasteValue' NUNCA puede ser 0. Debes asignar un valor estimado (Ej: 3.50) que represente el dinero salvado.`
       : `Estás en MODO CHEF. Libertad creativa. Puedes añadir ingredientes a la 'shopping_list' si es necesario. wasteValue puede ser bajo o 0.`;
 
-    // 🚀 LÓGICA DE CENAS LIGERAS Y BENEFICIOS
     const commonRules = `
       REGLAS GENERALES ESTRICTAS:
       1. GRAMOS EXACTOS. Adapta todo para ${profile.people} personas (${profile.ages}).
       2. Adapta los pasos a: ${profile.robot || 'olla/sartén'}.
       3. REGLA ANTI-ESPECIAS: NUNCA incluyas sal, pimienta, aceite, agua o especias en la 'shopping_list'.
-      4. TONO: Descripciones muy creativas, divertidas y mágicas.
-      5. REGLA DE CENAS LIGERAS: Las recetas asignadas a 'dinner' o 'dinner_alt' DEBEN SER CENAS MUY LIGERAS (ensaladas, pescado, tortillas, cremas). PROHIBIDO estofados, legumbres pesadas o grandes platos de pasta por la noche.
-      6. BENEFICIO DE SALUD: Llena el campo 'health_benefit' con una frase súper corta y atractiva sobre los beneficios de este plato para el cuerpo (Ej: "Proteína pura para tus músculos 💪", o "Muy ligero para dormir del tirón 🌙").
+      4. TÍTULOS CLAROS: El 'title' debe ser el nombre real y claro del plato (Ej: 'Pollo asado al limón'). PROHIBIDO usar nombres poéticos o abstractos en el título.
+      5. TONO: Descripciones muy creativas, divertidas y mágicas.
+      6. REGLA DE CENAS LIGERAS: Las recetas asignadas a 'dinner' o 'dinner_alt' DEBEN SER CENAS MUY LIGERAS (ensaladas, pescado, tortillas, cremas). PROHIBIDO estofados, legumbres pesadas o grandes platos de pasta por la noche.
+      7. BENEFICIO DE SALUD: Llena el campo 'health_benefit' con una frase súper corta (4-6 palabras) sobre el beneficio principal de este plato para el cuerpo (Ej: "Proteína pura para tus músculos 💪", o "Muy ligero para dormir del tirón 🌙").
     `;
 
     if (planType === 'daily') {
@@ -272,7 +271,7 @@ const generateRealPlan = async (
     
     return parsed;
   } catch (error: any) {
-    console.error("Error silencioso de IA:", error);
+    console.error("Error silencioso del motor:", error);
     if (POSTHOG_KEY) posthog.capture('plan_generation_error', { error: error.message });
     return null;
   }
@@ -321,9 +320,21 @@ const CustomConfirm = ({ message, onConfirm, onCancel }: { message: string, onCo
   );
 };
 
-const FormattedText = ({ text }: { text: string }) => {
-  if (typeof text !== 'string') return null;
-  const parts = text.split(/(\*\*.*?\*\*)/g);
+const FormattedText = ({ text }: { text: any }) => {
+  if (!text) return null;
+  let strText = '';
+  
+  if (typeof text === 'string') {
+    strText = text;
+  } else if (typeof text === 'object') {
+    strText = text.step || text.text || text.description || text.name || Object.values(text)[0] || JSON.stringify(text);
+  }
+  
+  if (typeof strText !== 'string') {
+    strText = String(strText);
+  }
+  
+  const parts = strText.split(/(\*\*.*?\*\*)/g);
   return (
     <span>
       {parts.map((part, i) => (
@@ -340,7 +351,7 @@ const PsychologicalLoader = ({ startTime, mode = 'recipe' }: { startTime: number
   const [msgIdx, setMsgIdx] = useState(0);
   
   const SCANNER_MESSAGES = [
-    "🤖 El Chef se está poniendo sus gafas mágicas...",
+    "🤖 El Asistente se está poniendo sus gafas mágicas...",
     "Leyendo entre líneas y manchas de kétchup... 🔍",
     "Traduciendo letra de médico a ingredientes... 📝",
     "¡Casi lo tengo! Clasificando todo en su cajón... 🧊"
@@ -381,7 +392,6 @@ const PsychologicalLoader = ({ startTime, mode = 'recipe' }: { startTime: number
         <div className="h-3 bg-stone-100 rounded-full w-4/6 mx-auto animate-pulse" style={{animationDelay: '300ms'}}></div>
       </div>
 
-      {/* 🚀 ARREGLADA LA BARRA DE CARGA */}
       <div className="w-4/5 mx-auto bg-stone-100 h-3 rounded-full overflow-hidden shadow-inner relative">
         <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-teal-400 to-teal-500 rounded-full transition-all duration-300 ease-out" style={{width: `${Math.min(progress, 98)}%`}}>
            <div className="w-full h-full progress-bar-stripes opacity-50"></div>
@@ -427,7 +437,7 @@ const AuthView = ({ onAlert }: AuthViewProps) => {
             <ChefHat className="text-teal-600 animate-wiggle transform -rotate-3" size={56}/>
           </div>
           <h1 className="text-4xl font-black text-stone-800 mb-2 tracking-tight">PlatoPlan</h1>
-          <p className="text-stone-500 font-medium text-lg">Tu asistente de cocina personal. 🧑‍🍳</p>
+          <p className="text-stone-500 font-medium text-lg">Tu Asistente de Cocina Personal. 🧑‍🍳</p>
         </div>
         
         <div className="space-y-4">
@@ -467,9 +477,11 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
   const [step, setStep] = useState(0); 
   
   const INTRO_SLIDES = [
-    { title: "Escanea tu compra", text: "Hazle una foto al ticket del súper o a la comida directamente. La IA organizará tu nevera sola. 📸", icon: <Camera size={80} className="text-stone-700"/>, color: "bg-teal-100" },
-    { title: "Magia Anti-Sobras", text: "Con un solo botón, creamos recetas increíbles con lo que tienes a punto de caducar. ¡Ahorra dinero! 💸", icon: <Sparkles size={80} className="text-stone-700"/>, color: "bg-orange-100" },
-    { title: "Lista Inteligente", text: "Lo que te falte se añade solo a la lista de la compra. Tacha en el súper con un toque y listo. 🛒", icon: <CheckCircle2 size={80} className="text-stone-700"/>, color: "bg-rose-100" }
+    { title: "El Escáner Mágico", text: "Hazle una foto a tu ticket del súper o a tu encimera. Nuestro Asistente Virtual identificará y ordenará toda tu comida en un segundo. 📸", icon: <Camera size={80} className="text-stone-700"/>, color: "bg-teal-100" },
+    { title: "Magia Anti-Sobras", text: "Dile al Chef qué ingredientes están a punto de caducar y él inventará una receta de aprovechamiento espectacular de la nada. 🦸‍♂️", icon: <Leaf size={80} className="text-stone-700"/>, color: "bg-green-100" },
+    { title: "El Tinder del Sabor", text: "Desliza recetas a la izquierda si no te apetecen, y a la derecha si te enamoran. Comer sano ahora es un juego. 💖", icon: <Heart size={80} className="text-stone-700"/>, color: "bg-rose-100" },
+    { title: "La Hucha Feliz", text: "Cada vez que cocinas en casa en vez de pedir comida, tu cerdito se llena. Mira cuánto ahorras al mes sin darte cuenta. 🐷", icon: <TrendingUp size={80} className="text-stone-700"/>, color: "bg-orange-100" },
+    { title: "Lista Inteligente", text: "Lo que te falte se añade solo a la lista de la compra. Tacha en el súper con un toque y listo. 🛒", icon: <CheckCircle2 size={80} className="text-stone-700"/>, color: "bg-blue-100" }
   ];
 
   return (
@@ -491,20 +503,20 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
           </div>
           <p className="text-stone-500 text-lg mb-12 font-medium leading-relaxed px-6">{INTRO_SLIDES[step].text}</p>
           
-          <div className="flex gap-3 justify-center mb-10">
-            {[0,1,2].map((i) => (
+          <div className="flex gap-2 justify-center mb-10">
+            {INTRO_SLIDES.map((_, i) => (
               <div key={i} className={`h-2.5 rounded-full transition-all duration-300 ${i === step ? 'w-8 bg-stone-800' : 'w-2 bg-stone-200'}`}></div>
             ))}
           </div>
           
           <button 
             onClick={() => {
-              if (step === 2) onComplete();
+              if (step === INTRO_SLIDES.length - 1) onComplete();
               else setStep(step + 1);
             }} 
             className="w-full py-5 bg-[#5CB82C] text-white rounded-[1.2rem] font-bold text-lg shadow-lg active:scale-95 transition-all hover:bg-[#4a9c22] hover:shadow-xl"
           >
-            {step === 2 ? '¡Empezar a Cocinar! 🍳' : 'Siguiente'}
+            {step === INTRO_SLIDES.length - 1 ? '¡Empezar a Cocinar! 🍳' : 'Siguiente Mágia ✨'}
           </button>
         </div>
       </div>
@@ -523,7 +535,14 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
   
   const progress = Math.min(100, (savings / level.next) * 100);
 
-  const greetings = ["¡Hoy huele a éxito, Chef! ✨", "¡A por todas en la cocina! 🍳", "La nevera te estaba esperando 🧊", "¡Preparando varitas mágicas! 🪄", "¡Día perfecto para una obra de arte! 🎨", "Tu cocina manda, tú decides 👑"];
+  const greetings = [
+    "¡Hoy huele a éxito, Chef! ✨", 
+    "¡A por todas en la cocina! 🍳", 
+    "La nevera te estaba esperando 🧊", 
+    "¡Preparando varitas mágicas! 🪄", 
+    "¡Día perfecto para una obra de arte! 🎨", 
+    "Tu cocina manda, tú decides 👑"
+  ];
   const randomGreeting = useMemo(() => greetings[Math.floor(Math.random() * greetings.length)], []);
 
   useEffect(() => {
@@ -617,7 +636,6 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
     if (!n.trim()) return;
     setIngredients([{ id: Date.now().toString(), name: n, quantity: '1', expiryStatus: 'fresh', category: cat }, ...ingredients]);
     setName('');
-    if (POSTHOG_KEY) posthog.capture('ingredient_added', { name: n, category: cat });
   };
 
   const toggleStatus = (id: string) => {
@@ -633,7 +651,7 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
     if (!file) return;
 
     if (!GEMINI_API_KEY) {
-      return onAlert("Falta la clave mágica de la IA (API KEY).");
+      return onAlert("Falta la clave mágica del Chef (API KEY).");
     }
 
     setIsScanning(true);
@@ -654,7 +672,6 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
          }));
          setIngredients([...newIngs, ...ingredients]);
          onAlert(`¡Magia visual! He añadido ${items.length} ingredientes a tu nevera. 🪄`);
-         if (POSTHOG_KEY) posthog.capture('camera_scanned', { items_found: items.length });
       } else {
          onAlert("Mmm... La foto está un poco borrosa o no he reconocido comida. ¡Inténtalo de nuevo!");
       }
@@ -663,11 +680,8 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
     reader.readAsDataURL(file);
   };
 
-  const phrases = ["Tu lienzo en blanco culinario 🎨", "¡Vamos a darle vida a estos ingredientes! ✨", "Cero desperdicio, máximo sabor 🤤", "Aquí empieza la magia de hoy 🪄", "Ingredientes listos para la pasarela 💃"];
+  const phrases = ["Tu lienzo en blanco culinario 🎨", "¡Vamos a darle vida a estos ingredientes! ✨", "Cero desperdicio, máximo sabor 🤤", "Aquí empieza la magia de hoy 🪄"];
   const randomPhrase = useMemo(() => phrases[Math.floor(Math.random() * phrases.length)], []);
-
-  const emptyPhrases = ["¡Ups! Tu nevera está bostezando 🥱", "Hace eco por aquí... ¡Añade algo! 🗣️", "Tu nevera pide mimitos 🥺", "¡Hora de hacer la compra virtual! 🛒"];
-  const randomEmptyPhrase = useMemo(() => emptyPhrases[Math.floor(Math.random() * emptyPhrases.length)], []);
 
   if (isScanning) {
     return (
@@ -697,18 +711,18 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
         <div className="flex items-center gap-3 font-black text-lg">
            <Camera size={26} className="group-hover:animate-wiggle text-teal-400"/> Escanear Ticket o Comida
         </div>
-        <span className="text-xs text-stone-300 font-medium mt-1 opacity-80 group-hover:opacity-100 transition-opacity">La IA leerá los ingredientes por ti ✨</span>
+        <span className="text-xs text-stone-300 font-medium mt-1 opacity-80 group-hover:opacity-100 transition-opacity">El Chef Mágico leerá los ingredientes por ti ✨</span>
       </label>
       
       <div className="flex gap-3 mb-6 relative z-10">
         <input 
           value={name} 
           onChange={e => setName(e.target.value)} 
-          className="flex-1 p-4 rounded-[1.2rem] border-2 border-white bg-white shadow-[0_5px_15px_rgba(0,0,0,0.03)] outline-none font-bold text-stone-700 focus:border-teal-400 focus:shadow-[0_5px_20px_rgba(20,184,166,0.1)] transition-all" 
+          className="flex-1 p-4 rounded-[1.2rem] border-2 border-white bg-white shadow-[0_5px_15px_rgba(0,0,0,0.03)] outline-none font-bold text-stone-700 focus:border-teal-400 transition-all" 
           placeholder="O escríbelo aquí a mano..." 
-          onKeyDown={e => e.key === 'Enter' && add(name)}
+          onKeyDown={e => e.key === 'Enter' && add(name)} 
         />
-        <button onClick={() => add(name)} className="bg-teal-500 hover:bg-teal-400 text-white p-4 rounded-[1.2rem] transition-all shadow-[0_5px_15px_rgba(20,184,166,0.3)] active:scale-90 hover:-translate-y-0.5">
+        <button onClick={() => add(name)} className="bg-teal-500 hover:bg-teal-400 text-white p-4 rounded-[1.2rem] transition-all active:scale-90 shadow-md">
           <Plus size={24}/>
         </button>
       </div>
@@ -722,55 +736,25 @@ const PantryView = ({ ingredients, setIngredients, onAlert }: PantryProps) => {
          </div>
       )}
 
-      <div className="mb-6 overflow-x-auto pb-4 flex gap-2 no-scrollbar -mx-6 px-6">
-        {STAPLES.map(s => (
-          <button
-            key={s.name}
-            onClick={() => add(s.name, s.cat)}
-            className="whitespace-nowrap px-5 py-2.5 bg-white border border-stone-100 rounded-full text-xs font-bold text-stone-500 active:scale-90 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 transition-all shadow-sm"
-          >
-            {s.name}
-          </button>
-        ))}
-      </div>
-      
       <div className="space-y-3">
         {ingredients.length === 0 && (
           <div className="text-center py-10 opacity-40 animate-pulse">
             <Utensils size={48} className="mx-auto mb-4 text-stone-400"/>
             <p className="font-bold text-lg text-stone-600">Todo vacío</p>
-            <p className="text-sm text-stone-500">{randomEmptyPhrase}</p>
           </div>
         )}
-        
+
         {ingredients.map((i: any, index: number) => (
-          <div
-            key={i.id}
-            className="bg-white p-4 rounded-[1.5rem] border border-stone-100 flex justify-between items-center shadow-[0_4px_15px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.05)] transition-all animate-fade-slide group"
-            style={{ animationDelay: `${index * 40}ms` }}
-          >
+          <div key={i.id} className="bg-white p-4 rounded-[1.5rem] border border-stone-100 flex justify-between items-center shadow-sm hover:shadow-md transition-all animate-fade-slide group" style={{ animationDelay: `${index * 40}ms` }}>
             <div className="flex items-center gap-4">
-              <div className={`w-3 h-3 rounded-full shadow-sm ring-4 ${
-                i.expiryStatus === 'urgent' ? 'bg-rose-400 ring-rose-100 animate-pulse' :
-                i.expiryStatus === 'soon' ? 'bg-amber-400 ring-amber-100' : 'bg-teal-400 ring-teal-100'
-              }`}></div>
+              <div className={`w-3 h-3 rounded-full shadow-sm ring-4 ${i.expiryStatus === 'urgent' ? 'bg-rose-400 ring-rose-100 animate-pulse' : i.expiryStatus === 'soon' ? 'bg-amber-400 ring-amber-100' : 'bg-teal-400 ring-teal-100'}`}></div>
               <span className="font-bold capitalize text-stone-800 text-[17px]">{i.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => toggleStatus(i.id)}
-                className={`text-[10px] font-black px-3 py-2 rounded-xl uppercase tracking-widest transition-colors active:scale-95 ${
-                  i.expiryStatus === 'urgent' ? 'bg-rose-50 text-rose-600' :
-                  i.expiryStatus === 'soon' ? 'bg-amber-50 text-amber-600' :
-                  'bg-teal-50 text-teal-600'
-                }`}
-              >
+              <button onClick={() => toggleStatus(i.id)} className={`text-[10px] font-black px-3 py-2 rounded-xl uppercase tracking-widest active:scale-95 ${i.expiryStatus === 'urgent' ? 'bg-rose-50 text-rose-600' : i.expiryStatus === 'soon' ? 'bg-amber-50 text-amber-600' : 'bg-teal-50 text-teal-600'}`}>
                 {i.expiryStatus === 'urgent' ? '¡SÁLVAME! 🆘' : i.expiryStatus === 'soon' ? 'PRONTITO ⏰' : 'FRESQUÍSIMO ✨'}
               </button>
-              <button
-                onClick={() => setIngredients(ingredients.filter((x: any) => x.id !== i.id))}
-                className="text-stone-300 hover:text-rose-500 transition-colors p-2 bg-stone-50 hover:bg-rose-50 rounded-xl active:scale-90"
-              >
+              <button onClick={() => setIngredients(ingredients.filter((x: any) => x.id !== i.id))} className="text-stone-300 hover:text-rose-500 p-2 bg-stone-50 rounded-xl active:scale-90">
                 <Trash2 size={18}/>
               </button>
             </div>
@@ -785,15 +769,15 @@ interface ShoppingProps { list: ShoppingItem[]; setList: (l: ShoppingItem[]) => 
 const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
   const [n, setN] = useState('');
   
-  const add = () => {
-    if (n.trim()) {
-      setList([{ id: Date.now().toString(), name: n, checked: false }, ...list]);
-      setN('');
-    }
+  const add = () => { 
+    if (n.trim()) { 
+      setList([{ id: Date.now().toString(), name: n, checked: false }, ...list]); 
+      setN(''); 
+    } 
   };
-
-  const toggle = (id: string) => {
-    setList(list.map((x: any) => x.id === id ? { ...x, checked: !x.checked } : x));
+  
+  const toggle = (id: string) => { 
+    setList(list.map((x: any) => x.id === id ? { ...x, checked: !x.checked } : x)); 
   };
   
   const share = () => {
@@ -811,15 +795,12 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
     }
   };
 
-  const emptyPhrases = ["¡Lista limpia! Tienes el súper dominado 🛒", "Cero recados pendientes. ¡A disfrutar! 😎", "No falta nada. ¡Eres un crack de la organización! 🏆", "Todo bajo control, Chef 🫡"];
-  const randomEmptyPhrase = useMemo(() => emptyPhrases[Math.floor(Math.random() * emptyPhrases.length)], []);
-
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-black text-stone-800">Lista de la compra 🛒</h1>
         {list.length > 0 && (
-          <button onClick={share} className="p-3 bg-white border border-stone-100 rounded-xl text-stone-500 shadow-sm active:scale-90 transition-all hover:text-stone-800 hover:shadow-md">
+          <button onClick={share} className="p-3 bg-white border border-stone-100 rounded-xl text-stone-500 shadow-sm active:scale-90 transition-all hover:text-stone-800">
             <Share2 size={20}/>
           </button>
         )}
@@ -829,11 +810,11 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
         <input 
           value={n} 
           onChange={e => setN(e.target.value)} 
-          className="flex-1 p-4 rounded-[1.2rem] border-2 border-white bg-white shadow-[0_5px_15px_rgba(0,0,0,0.03)] outline-none font-bold text-stone-700 focus:border-orange-400 focus:shadow-[0_5px_20px_rgba(249,115,22,0.1)] transition-all" 
+          className="flex-1 p-4 rounded-[1.2rem] border-2 border-white bg-white shadow-sm font-bold text-stone-700 focus:border-orange-400 transition-all" 
           placeholder="¿Qué falta en casa?" 
-          onKeyDown={e => e.key === 'Enter' && add()}
+          onKeyDown={e => e.key === 'Enter' && add()} 
         />
-        <button onClick={add} className="bg-orange-400 hover:bg-orange-500 text-white p-4 rounded-[1.2rem] transition-all shadow-[0_5px_15px_rgba(249,115,22,0.3)] active:scale-90 hover:-translate-y-0.5">
+        <button onClick={add} className="bg-orange-400 hover:bg-orange-500 text-white p-4 rounded-[1.2rem] shadow-md active:scale-90">
           <Plus size={24}/>
         </button>
       </div>
@@ -843,34 +824,21 @@ const ShoppingView = ({ list, setList, onAlert }: ShoppingProps) => {
           <div className="text-center py-24 opacity-40">
             <ShoppingCart size={56} className="mx-auto mb-4 text-stone-400"/>
             <p className="font-bold text-lg text-stone-600">Todo comprado.</p>
-            <p className="text-sm text-stone-500">{randomEmptyPhrase}</p>
           </div>
         ) : (
           list.map((i: any, index: number) => (
-            <div
-              key={i.id}
-              onClick={() => toggle(i.id)}
-              className={`p-5 rounded-[1.5rem] border flex items-center gap-4 cursor-pointer transition-all duration-300 animate-fade-slide active:scale-[0.98] ${
-                i.checked ? 'opacity-50 bg-stone-50 border-transparent' : 'bg-white border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_25px_rgba(0,0,0,0.05)] hover:-translate-y-0.5'
-              }`}
-              style={{ animationDelay: `${index * 40}ms` }}
-            >
-              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${
-                i.checked ? 'bg-teal-500 border-teal-500' : 'border-stone-300 bg-stone-50'
-              }`}>
+            <div key={i.id} onClick={() => toggle(i.id)} className={`p-5 rounded-[1.5rem] border flex items-center gap-4 cursor-pointer transition-all duration-300 animate-fade-slide active:scale-[0.98] ${i.checked ? 'opacity-50 bg-stone-50 border-transparent' : 'bg-white border-stone-100 shadow-sm hover:shadow-md'}`}>
+              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center ${i.checked ? 'bg-teal-500 border-teal-500' : 'border-stone-300 bg-stone-50'}`}>
                 {i.checked && <Check size={16} className="text-white animate-pop-in" strokeWidth={3}/>}
               </div>
-              <span className={`text-[17px] font-bold transition-colors duration-300 ${i.checked ? 'line-through text-stone-400' : 'text-stone-800'}`}>{i.name}</span>
+              <span className={`text-[17px] font-bold ${i.checked ? 'line-through text-stone-400' : 'text-stone-800'}`}>{i.name}</span>
             </div>
           ))
         )}
       </div>
       
       {list.some((i: any) => i.checked) && (
-        <button
-          onClick={() => setList(list.filter((x: any) => !x.checked))}
-          className="w-full mt-10 py-5 bg-rose-50 text-rose-600 hover:bg-rose-100 font-black rounded-[1.5rem] uppercase tracking-widest text-sm transition-all active:scale-95 shadow-sm"
-        >
+        <button onClick={() => setList(list.filter((x: any) => !x.checked))} className="w-full mt-10 py-5 bg-rose-50 text-rose-600 font-black rounded-[1.5rem] uppercase tracking-widest text-sm active:scale-95 shadow-sm">
           Barrer lo comprado 🧹
         </button>
       )}
@@ -882,9 +850,6 @@ interface HistoryProps { history: Recipe[]; onDeleteAll: () => void; onDeleteRec
 const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: HistoryProps) => {
   const [search, setSearch] = useState('');
   const filtered = history.filter((r: any) => (r.title || '').toLowerCase().includes(search.toLowerCase()));
-  
-  const emptyPhrases = ["¡Tu libro de hechizos está vacío! 📖", "Aún no hay obras de arte por aquí 🎨", "El recetario espera tus éxitos ✨", "¡Ponte el delantal y guarda aquí tu primera magia! 🧑‍🍳"];
-  const randomEmptyPhrase = useMemo(() => emptyPhrases[Math.floor(Math.random() * emptyPhrases.length)], []);
 
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-full animate-in fade-in">
@@ -894,10 +859,7 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
           <p className="text-stone-400 text-sm font-medium italic mt-1">El libro de hechizos del Chef.</p>
         </div>
         {history.length > 0 && (
-          <button
-            onClick={onDeleteAll}
-            className="text-rose-400 p-3 bg-white rounded-xl shadow-sm border border-stone-100 hover:bg-rose-50 transition-colors active:scale-90"
-          >
+          <button onClick={onDeleteAll} className="text-rose-400 p-3 bg-white rounded-xl shadow-sm border border-stone-100 hover:bg-rose-50 transition-colors active:scale-90">
             <Trash size={20}/>
           </button>
         )}
@@ -906,32 +868,21 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
       {history.length > 0 && (
         <div className="relative mb-8 shadow-sm group">
           <Search className="absolute left-5 top-5 text-stone-400 transition-colors group-focus-within:text-teal-500" size={20}/>
-          <input 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-            placeholder="Buscar esa receta tan rica..." 
-            className="w-full p-4 pl-14 bg-white border-2 border-transparent shadow-[0_5px_15px_rgba(0,0,0,0.03)] rounded-[1.5rem] outline-none font-bold text-stone-700 focus:border-teal-400 transition-all"
-          />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar esa receta tan rica..." className="w-full p-4 pl-14 bg-white border-2 border-transparent shadow-sm rounded-[1.5rem] outline-none font-bold text-stone-700 focus:border-teal-400 transition-all" />
         </div>
       )}
       
       {filtered.length === 0 ? (
         <div className="text-center py-24 opacity-40">
           <Star size={56} className="mx-auto mb-4 text-stone-400"/>
-          <p className="font-bold text-lg text-stone-600">
-            {history.length === 0 ? 'Sin magia guardada.' : 'No encontramos ese plato.'}
-          </p>
-          {history.length === 0 && <p className="text-sm text-stone-500">{randomEmptyPhrase}</p>}
+          <p className="font-bold text-lg text-stone-600">Sin magia guardada.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filtered.length > 0 && !search && (
              <div className="mb-6">
                <span className="text-[10px] font-black text-teal-600 uppercase tracking-widest mb-2 block ml-2">Tu última obra maestra ✨</span>
-               <div 
-                 onClick={() => onViewRecipe(filtered[0])}
-                 className="bg-gradient-to-br from-stone-900 to-stone-800 text-white p-6 rounded-[2rem] shadow-[0_15px_30px_rgba(0,0,0,0.15)] relative overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform active:scale-[0.98]"
-               >
+               <div onClick={() => onViewRecipe(filtered[0])} className="bg-gradient-to-br from-stone-900 to-stone-800 text-white p-6 rounded-[2rem] shadow-lg relative overflow-hidden group cursor-pointer active:scale-[0.98]">
                  <div className="absolute -right-4 -top-4 text-8xl opacity-20 group-hover:scale-110 transition-transform duration-500">
                    {getEmojiForRecipe(filtered[0].title)}
                  </div>
@@ -950,32 +901,21 @@ const HistoryView = ({ history, onDeleteAll, onDeleteRecipe, onViewRecipe }: His
             {filtered.map((r: any, i: number) => {
               if (!search && i === 0) return null; 
               const realIndex = history.findIndex(h => h.id === r.id || (h.title === r.title && h.date === r.date));
-              const emoji = getEmojiForRecipe(r.title);
               
               return (
-                <div
-                  key={r.id || i}
-                  onClick={() => onViewRecipe(r)}
-                  className="bg-white p-4 rounded-[1.5rem] border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex items-center gap-4 hover:shadow-[0_10px_30px_rgba(0,0,0,0.06)] transition-all duration-300 group animate-fade-slide cursor-pointer hover:-translate-y-1 active:scale-[0.98]"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                >
-                  <div className="w-16 h-16 shrink-0 bg-stone-50 rounded-[1.2rem] flex items-center justify-center text-3xl shadow-inner group-hover:bg-teal-50 transition-colors">
-                    {emoji}
+                <div key={r.id || i} onClick={() => onViewRecipe(r)} className="bg-white p-4 rounded-[1.5rem] border border-stone-100 shadow-sm flex items-center gap-4 cursor-pointer active:scale-[0.98]">
+                  <div className="w-16 h-16 shrink-0 bg-stone-50 rounded-[1.2rem] flex items-center justify-center text-3xl shadow-inner">
+                    {getEmojiForRecipe(r.title)}
                   </div>
                   <div className="flex-1 pr-2 min-w-0">
-                    <h3 className="text-base font-black text-stone-800 leading-tight mb-1 truncate group-hover:text-teal-600 transition-colors">{r.title}</h3>
+                    <h3 className="text-base font-black text-stone-800 leading-tight mb-1 group-hover:text-teal-600 transition-colors">{r.title}</h3>
                     <p className="text-xs text-stone-400 font-bold flex items-center gap-1">
-                      <Clock size={12} className="text-stone-300"/> {r.time} • <Leaf size={12} className="text-teal-400 ml-1"/> +{r.wasteValue}€
+                      <Clock size={12}/> {r.time} • <Leaf size={12} className="text-teal-400 ml-1"/> +{r.wasteValue}€
                     </p>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); onDeleteRecipe(realIndex); }}
-                      className="bg-stone-50 p-2 rounded-xl text-stone-300 hover:bg-rose-500 hover:text-white transition-all active:scale-90"
-                    >
-                      <Trash2 size={16}/>
-                    </button>
-                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); onDeleteRecipe(realIndex); }} className="bg-stone-50 p-2 rounded-xl text-stone-300 active:scale-90">
+                    <Trash2 size={16}/>
+                  </button>
                 </div>
               );
             })}
@@ -1000,19 +940,11 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
 
   const toggleAllergy = (allergy: string) => {
     const current = Array.isArray(l.allergies) ? l.allergies : [];
-    setL({
-      ...l,
-      allergies: current.includes(allergy)
-        ? current.filter((a: string) => a !== allergy)
-        : [...current, allergy]
-    });
+    setL({ ...l, allergies: current.includes(allergy) ? current.filter((a: string) => a !== allergy) : [...current, allergy] });
   };
   
   const addCustomAllergy = () => {
-    if (customAllergy.trim() && !(l.allergies || []).includes(customAllergy.trim())) {
-      toggleAllergy(customAllergy.trim());
-      setCustomAllergy('');
-    }
+    if (customAllergy.trim() && !(l.allergies || []).includes(customAllergy.trim())) { toggleAllergy(customAllergy.trim()); setCustomAllergy(''); }
   };
 
   const requestNotifications = async () => {
@@ -1021,61 +953,37 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
         await OneSignal.Slidedown.promptPush();
         setPushGranted(Notification.permission === "granted");
       } else {
-        onAlert("Las notificaciones están bloqueadas. Tienes que darnos permiso en los ajustes de tu navegador o añadir la app al inicio en iPhone.");
+        onAlert("Las notificaciones están bloqueadas en tu navegador o dispositivo.");
       }
-    } catch (error) {
-      console.error(error);
-      onAlert("Algo falló al pedir permisos. Cosas de la tecnología 😅");
-    }
+    } catch (error) { onAlert("Algo falló al pedir permisos."); }
   };
 
   return (
-    <div className="bg-white rounded-[2rem] border border-stone-100 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.1)] mb-8 animate-in slide-in-from-top-4 relative z-20">
-      <button onClick={onClose} className="absolute top-6 right-6 text-stone-400 hover:text-stone-800 bg-stone-50 p-2 rounded-full transition-colors active:scale-90">
-        <X size={20}/>
-      </button>
-      <h2 className="text-2xl font-black text-stone-800 mb-8 flex items-center gap-2">
-        <Settings2 className="text-teal-500"/> Ajustes
-      </h2>
+    <div className="bg-white rounded-[2rem] border border-stone-100 p-6 shadow-xl mb-8 animate-in slide-in-from-top-4 relative z-20">
+      <button onClick={onClose} className="absolute top-6 right-6 text-stone-400 hover:text-stone-800 bg-stone-50 p-2 rounded-full active:scale-90"><X size={20}/></button>
+      <h2 className="text-2xl font-black text-stone-800 mb-8 flex items-center gap-2"><Settings2 className="text-teal-500"/> Ajustes</h2>
       
       <div className="space-y-8">
         <div>
           <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3 block">Comensales y Edades</label>
           <div className="flex gap-4 items-center mb-4 bg-stone-50 p-2 rounded-[1.5rem] w-fit border border-stone-100">
-            <button onClick={() => setL({ ...l, people: Math.max(1, l.people - 1) })} className="w-12 h-12 rounded-[1rem] bg-white shadow-sm font-black text-xl text-stone-600 active:scale-90 transition-transform">
-              -
-            </button>
+            <button onClick={() => setL({ ...l, people: Math.max(1, l.people - 1) })} className="w-12 h-12 rounded-[1rem] bg-white shadow-sm font-black text-xl text-stone-600 active:scale-90">-</button>
             <span className="text-2xl font-black text-stone-800 w-8 text-center">{l.people}</span>
-            <button onClick={() => setL({ ...l, people: l.people + 1 })} className="w-12 h-12 rounded-[1rem] bg-teal-500 text-white shadow-md font-black text-xl active:scale-90 transition-transform">
-              +
-            </button>
+            <button onClick={() => setL({ ...l, people: l.people + 1 })} className="w-12 h-12 rounded-[1rem] bg-teal-500 text-white shadow-md font-black text-xl active:scale-90">+</button>
           </div>
-          <input
-            value={l.ages}
-            onChange={e => setL({ ...l, ages: e.target.value })}
-            placeholder="Ej: 2 Adultos, 1 Niño (5 años)"
-            className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm transition-all"
-          />
+          <input value={l.ages} onChange={e => setL({ ...l, ages: e.target.value })} placeholder="Ej: 2 Adultos, 1 Niño (5 años)" className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm" />
         </div>
         
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Dieta</label>
-            <select
-              value={l.style}
-              onChange={e => setL({ ...l, style: e.target.value })}
-              className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm transition-all"
-            >
+            <select value={l.style} onChange={e => setL({ ...l, style: e.target.value })} className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm">
               {DIET_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.id}</option>)}
             </select>
           </div>
           <div>
             <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Robot</label>
-            <select
-              value={l.robot}
-              onChange={e => setL({ ...l, robot: e.target.value })}
-              className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm transition-all"
-            >
+            <select value={l.robot} onChange={e => setL({ ...l, robot: e.target.value })} className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm">
               {ROBOT_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
@@ -1087,30 +995,14 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
             <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md">{Array.isArray(l.allergies) ? l.allergies.length : 0} Activas</span>
           </label>
           <div className="flex gap-2 mb-4">
-            <input
-              value={customAllergy}
-              onChange={e => setCustomAllergy(e.target.value)}
-              placeholder="Ej: Canela..."
-              className="flex-1 p-3 rounded-xl border border-stone-200 outline-none focus:border-orange-400 font-bold text-sm bg-white shadow-sm transition-all"
-              onKeyDown={e => e.key === 'Enter' && addCustomAllergy()}
-            />
-            <button onClick={addCustomAllergy} className="bg-stone-800 hover:bg-stone-900 text-white px-5 rounded-xl font-bold text-sm shadow-md transition-colors active:scale-95">
-              Añadir
-            </button>
+            <input value={customAllergy} onChange={e => setCustomAllergy(e.target.value)} placeholder="Ej: Canela..." className="flex-1 p-3 rounded-xl border border-stone-200 outline-none focus:border-orange-400 font-bold text-sm bg-white shadow-sm" onKeyDown={e => e.key === 'Enter' && addCustomAllergy()} />
+            <button onClick={addCustomAllergy} className="bg-stone-800 text-white px-5 rounded-xl font-bold text-sm shadow-md active:scale-95">Añadir</button>
           </div>
           <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto no-scrollbar pb-4">
             {Array.from(new Set([...(l.allergies || []), ...DISLIKES_OPTIONS])).map(a => {
               const isSel = (l.allergies || []).includes(a as string);
               return (
-                <button
-                  key={a as string}
-                  onClick={() => toggleAllergy(a as string)}
-                  className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all duration-300 border-2 active:scale-95 ${
-                    isSel
-                      ? 'bg-orange-400 text-white border-orange-400 shadow-md'
-                      : 'bg-stone-50 border-transparent text-stone-500 hover:bg-stone-100'
-                  }`}
-                >
+                <button key={a as string} onClick={() => toggleAllergy(a as string)} className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 ${isSel ? 'bg-orange-400 text-white shadow-md' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>
                   {a as string}
                 </button>
               );
@@ -1120,125 +1012,80 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
         
         <div className="pt-4 border-t border-stone-100 space-y-3">
           {!pushGranted ? (
-            <button
-              onClick={requestNotifications}
-              className="w-full py-4 bg-teal-50 hover:bg-teal-100 text-teal-600 rounded-[1.2rem] font-bold text-sm transition-colors flex justify-center items-center gap-2 active:scale-95"
-            >
-              <Bell size={18}/> Avisadme de caducidades
-            </button>
+            <button onClick={requestNotifications} className="w-full py-4 bg-teal-50 text-teal-600 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 active:scale-95"><Bell size={18}/> Avisadme de caducidades</button>
           ) : (
-            <div className="w-full py-4 bg-stone-50 text-stone-400 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 border border-stone-100">
-              <CheckCircle2 size={18} className="text-teal-500"/> Avisos de caducidad activos
-            </div>
+            <div className="w-full py-4 bg-stone-50 text-stone-400 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 border border-stone-100"><CheckCircle2 size={18} className="text-teal-500"/> Avisos activos</div>
           )}
-
-          <button
-            onClick={() => { setProfile(l); onClose(); }}
-            className="w-full py-5 bg-stone-900 hover:bg-black text-white rounded-[1.2rem] font-black text-lg shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2"
-          >
-            <Save size={20}/> Guardar Cambios
-          </button>
-          <button
-            onClick={onLogout}
-            className="w-full py-4 text-rose-500 bg-rose-50 hover:bg-rose-100 rounded-[1.2rem] font-bold text-xs uppercase tracking-widest transition-colors flex justify-center items-center gap-2 active:scale-95"
-          >
-            <User size={16}/> Salir de la cocina
-          </button>
+          <button onClick={() => { setProfile(l); onClose(); }} className="w-full py-5 bg-stone-900 text-white rounded-[1.2rem] font-black text-lg shadow-lg active:scale-95 flex justify-center items-center gap-2"><Save size={20}/> Guardar Cambios</button>
+          <button onClick={onLogout} className="w-full py-4 text-rose-500 bg-rose-50 rounded-[1.2rem] font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 active:scale-95"><User size={16}/> Salir de la cocina</button>
         </div>
       </div>
     </div>
   );
 };
 
-// 🚀 REFACTORIZADO: TINDER DE RECETAS EN PLANNER + PASOS UI
-interface PlannerProps {
-  plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number;
-  onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void;
-  mode: 'aprovechamiento'|'chef'; setMode: (m: 'aprovechamiento'|'chef') => void;
-  profile: UserProfile; setProfile: (p: UserProfile) => void; onViewRecipe: (r: Recipe) => void;
-  batchConfig: BatchConfig; setBatchConfig: (c: BatchConfig) => void; onLogout: () => void;
-  onAddMissingToShoppingList: (i: string[]) => void; onAlert: (m:string)=>void;
-}
-const PlannerView = ({
-  plan, onReset, loading, loadingStartTime, onGenerate, planType, setPlanType,
-  mode, setMode, profile, setProfile, onViewRecipe,
-  batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList, onAlert
-}: PlannerProps) => {
+interface PlannerProps { plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number; onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void; mode: 'aprovechamiento'|'chef'; setMode: (m: 'aprovechamiento'|'chef') => void; profile: UserProfile; setProfile: (p: UserProfile) => void; onViewRecipe: (r: Recipe) => void; batchConfig: BatchConfig; setBatchConfig: (c: BatchConfig) => void; onLogout: () => void; onAddMissingToShoppingList: (i: string[]) => void; onAlert: (m:string)=>void; }
+const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, planType, setPlanType, mode, setMode, profile, setProfile, onViewRecipe, batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList, onAlert }: PlannerProps) => {
   const [showSettings, setShowSettings] = useState(false);
-  
   const [swipePhase, setSwipePhase] = useState<'lunch' | 'dinner' | 'done'>('lunch');
   const [lunchRejected, setLunchRejected] = useState(false);
   const [dinnerRejected, setDinnerRejected] = useState(false);
   const [animationClass, setAnimationClass] = useState('');
 
   useEffect(() => {
-    if (plan && plan.type === 'daily') {
-      setSwipePhase('lunch');
-      setLunchRejected(false);
-      setDinnerRejected(false);
-      setAnimationClass('');
-    }
+    if (plan && plan.type === 'daily') { setSwipePhase('lunch'); setLunchRejected(false); setDinnerRejected(false); setAnimationClass(''); }
   }, [plan]);
 
   const handleSwipe = (direction: 'left' | 'right') => {
     setAnimationClass(direction === 'left' ? 'animate-swipe-left' : 'animate-swipe-right');
-    
     setTimeout(() => {
       if (direction === 'left') {
         if (swipePhase === 'lunch') {
-          if (!lunchRejected && plan?.lunch_alt) setLunchRejected(true);
-          else onAlert("¡Esa era la última opción para comer! Dale a 'Me Enamora' o genera un plan nuevo.");
+          if (!lunchRejected && plan?.lunch_alt && Object.keys(plan.lunch_alt).length > 0) setLunchRejected(true);
+          else onAlert("¡Esa era la última opción para comer! Dale a '¡Lo quiero!' o genera magia nueva.");
         } else {
-          if (!dinnerRejected && plan?.dinner_alt) setDinnerRejected(true);
-          else onAlert("¡Última opción de cena! Acepta o genera magia de nuevo.");
+          if (!dinnerRejected && plan?.dinner_alt && Object.keys(plan.dinner_alt).length > 0) setDinnerRejected(true);
+          else onAlert("¡Última opción de cena! Dale a '¡Lo quiero!' o genera magia nueva.");
         }
       } else {
-        if (swipePhase === 'lunch') setSwipePhase('dinner');
-        else setSwipePhase('done');
+        if (swipePhase === 'lunch') setSwipePhase('dinner'); else setSwipePhase('done');
       }
       setAnimationClass('');
     }, 400); 
   };
 
   const renderTinderCard = (title: string, r: any) => {
-    if (!r) return null;
+    if (!r || !r.title) return null;
     return (
       <div className={`bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-[0_20px_50px_rgba(0,0,0,0.08)] relative overflow-hidden flex flex-col items-center text-center ${animationClass}`}>
-        <div className="w-24 h-24 bg-stone-50 rounded-full flex items-center justify-center text-5xl mb-6 shadow-inner">
-          {getEmojiForRecipe(r.title)}
-        </div>
+        <div className="w-24 h-24 bg-stone-50 rounded-full flex items-center justify-center text-5xl mb-6 shadow-inner">{getEmojiForRecipe(r.title)}</div>
         <span className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] mb-2">{title} Propuesta</span>
         <h3 className="text-3xl font-black text-stone-800 leading-tight mb-4">{r.title}</h3>
         
         <div className="flex gap-3 mb-4 justify-center w-full">
-          <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl">
-            <Clock size={14} className="text-teal-500"/> {r.time || 'Rápido'}
-          </span>
-          <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl">
-            <Flame size={14} className="text-orange-500"/> {r.calories || 0} kcal
-          </span>
+          <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl"><Clock size={14} className="text-teal-500"/> {r.time || 'Rápido'}</span>
+          <span className="text-xs font-bold text-stone-600 flex items-center gap-1 bg-stone-50 px-3 py-1.5 rounded-xl"><Flame size={14} className="text-orange-500"/> {r.calories || 0} kcal</span>
         </div>
 
-        {/* 🚀 NUEVO: EL BENEFICIO EN LA TARJETA */}
         {r.health_benefit && (
           <div className="mb-6 px-4 py-2 bg-teal-50/50 rounded-xl border border-teal-100">
-            <p className="text-xs font-black text-teal-700">{r.health_benefit}</p>
+            <p className="text-xs font-black text-teal-700">✨ {r.health_benefit}</p>
           </div>
         )}
 
-        <p className="text-sm text-stone-500 font-medium italic leading-relaxed mb-8 px-4 line-clamp-3">"{r.description}"</p>
+        <p className="text-sm text-stone-500 font-medium italic leading-relaxed mb-8 px-4">"{r.description}"</p>
         
         <div className="flex gap-4 w-full mt-auto pt-4 border-t border-stone-50">
-          <button onClick={() => handleSwipe('left')} className="flex-1 py-5 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90 transition-all">
-            <XOctagon size={24}/> Paso
-          </button>
-          <button onClick={() => handleSwipe('right')} className="flex-1 py-5 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90 transition-all shadow-[0_10px_20px_rgba(244,63,94,0.3)]">
-            <Heart size={24}/> ¡Lo quiero!
-          </button>
+          <button onClick={() => handleSwipe('left')} className="flex-1 py-5 bg-stone-100 text-stone-500 rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90"><XOctagon size={24}/> Paso</button>
+          <button onClick={() => handleSwipe('right')} className="flex-1 py-5 bg-rose-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest flex flex-col items-center gap-1 active:scale-90 shadow-lg"><Heart size={24}/> ¡Lo quiero!</button>
         </div>
       </div>
     );
   };
+
+  const finalLunch = plan && (lunchRejected && plan.lunch_alt && Object.keys(plan.lunch_alt).length > 0 ? plan.lunch_alt : plan.lunch);
+  const finalDinner = plan && (dinnerRejected && plan.dinner_alt && Object.keys(plan.dinner_alt).length > 0 ? plan.dinner_alt : plan.dinner);
+  const daysToRender = plan?.type === 'batch' ? plan.days : [{ day: 1, lunch: finalLunch, dinner: finalDinner }];
 
   return (
     <div className="p-6 pt-10 pb-32 animate-in fade-in bg-[#FDFBF7] min-h-full">
@@ -1247,60 +1094,39 @@ const PlannerView = ({
         <h1 className="text-3xl font-black text-stone-800 tracking-tight">Hacer Magia ✨</h1>
       </div>
 
-      {showSettings ? (
-        <TribeSettings
-          profile={profile}
-          setProfile={setProfile}
-          onClose={() => setShowSettings(false)}
-          onLogout={onLogout}
-          onAlert={onAlert}
-        />
-      ) : (
-        !plan && !loading && (
-          <div className="mb-8 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-[0_4px_15px_rgba(0,0,0,0.02)]">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 1</span>
-              <button onClick={() => setShowSettings(true)} className="text-xs font-bold text-stone-400 underline">Editar</button>
-            </div>
-            <h3 className="font-black text-stone-800 mb-1">¿Para quién cocinamos?</h3>
-            <p className="text-sm text-stone-500 font-medium capitalize">
-              {profile.people} personas • Dieta {profile.style}
-            </p>
+      {!plan && !loading && !showSettings && (
+        <div className="mb-8 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-sm">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 1</span>
+            <button onClick={() => setShowSettings(true)} className="text-xs font-bold text-stone-400 underline">Editar</button>
           </div>
-        )
+          <h3 className="font-black text-stone-800 mb-1">¿Para quién cocinamos?</h3>
+          <p className="text-sm text-stone-500 font-medium capitalize">{profile.people} personas • Dieta {profile.style}</p>
+        </div>
+      )}
+
+      {showSettings && (
+         <div className="mb-8 p-6 bg-white rounded-[2rem] shadow-xl border border-stone-100 relative">
+            <button onClick={() => setShowSettings(false)} className="absolute top-4 right-4 text-stone-400"><X/></button>
+            <h3 className="font-black text-xl mb-4">Ajustes del Chef</h3>
+            <p className="text-stone-500 mb-4 text-sm">Cambia los invitados o alergias aquí.</p>
+            <button onClick={() => setShowSettings(false)} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold">Volver a Magia</button>
+         </div>
       )}
 
       {plan && !loading && (
-        <button
-          onClick={() => { onReset(); setSwipePhase('lunch'); }}
-          className="w-full mb-8 py-5 bg-rose-50 text-rose-600 font-black rounded-[1.5rem] hover:bg-rose-100 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
-        >
-          <Trash2 size={18}/> Empezar de cero
-        </button>
+        <button onClick={() => { onReset(); setSwipePhase('lunch'); }} className="w-full mb-8 py-5 bg-rose-50 text-rose-600 font-black rounded-[1.5rem] flex items-center justify-center gap-2 active:scale-95 hover:bg-rose-100 transition-all"><Trash2 size={18}/> Empezar de cero</button>
       )}
       
       {!plan && !loading && !showSettings && (
         <div className="animate-in slide-in-from-bottom-8 duration-500">
-          
           <div className="mb-2 flex items-center gap-2">
              <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 2</span>
              <h3 className="font-black text-stone-800">¿Qué menú te preparo?</h3>
           </div>
           <div className="bg-stone-100/80 p-1.5 rounded-[1.5rem] flex mb-8 shadow-inner">
-            <button
-              onClick={() => setPlanType('daily')}
-              className={`flex-1 py-4 text-sm font-black rounded-[1.2rem] transition-all duration-300 ${
-                planType === 'daily' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:text-stone-700'
-              }`}
-            >
-              Menú del día
-            </button>
-            <button
-              onClick={() => setPlanType('batch')}
-              className={`flex-1 py-3 text-sm font-black rounded-[1.2rem] transition-all duration-300 flex flex-col items-center justify-center ${
-                planType === 'batch' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:text-stone-700'
-              }`}
-            >
+            <button onClick={() => setPlanType('daily')} className={`flex-1 py-4 text-sm font-black rounded-[1.2rem] transition-all duration-300 ${planType === 'daily' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:text-stone-700'}`}>Menú del día</button>
+            <button onClick={() => setPlanType('batch')} className={`flex-1 py-3 text-sm font-black rounded-[1.2rem] flex flex-col items-center justify-center transition-all duration-300 ${planType === 'batch' ? 'bg-white text-stone-900 shadow-md' : 'text-stone-500 hover:text-stone-700'}`}>
               <span className="flex items-center gap-2"><CalendarDays size={16}/> Batchcooking</span>
               <span className={`text-[10px] font-bold mt-0.5 ${planType === 'batch' ? 'opacity-50' : 'opacity-40'}`}>(Toda la semana)</span>
             </button>
@@ -1308,43 +1134,16 @@ const PlannerView = ({
 
           {planType === 'batch' && (
             <div className="bg-white p-6 rounded-[2rem] border border-stone-100 mb-8 shadow-sm animate-in zoom-in-95 duration-300">
-              <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                <CalendarDays size={16} className="text-orange-500"/> ¿Cuántos días te resuelvo?
-              </p>
+              <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2"><CalendarDays size={16} className="text-orange-500"/> ¿Cuántos días te resuelvo?</p>
               <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
                 {[2, 3, 4, 5, 6, 7].map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setBatchConfig({ ...batchConfig, days: d })}
-                    className={`w-14 h-14 rounded-[1.2rem] font-black text-xl flex-shrink-0 transition-all duration-300 border-2 active:scale-90 ${
-                      batchConfig.days === d
-                        ? 'bg-teal-500 text-white border-teal-500 shadow-md transform scale-110'
-                        : 'bg-stone-50 border-transparent text-stone-500 hover:bg-stone-100'
-                    }`}
-                  >
-                    {d}
-                  </button>
+                  <button key={d} onClick={() => setBatchConfig({ ...batchConfig, days: d })} className={`w-14 h-14 rounded-[1.2rem] font-black text-xl flex-shrink-0 transition-all duration-300 border-2 active:scale-90 ${batchConfig.days === d ? 'bg-teal-500 text-white border-teal-500 shadow-md transform scale-110' : 'bg-stone-50 border-transparent text-stone-500'}`}>{d}</button>
                 ))}
               </div>
-              <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2">
-                <Utensils size={16} className="text-teal-500"/> ¿Para qué comidas?
-              </p>
+              <p className="font-black text-stone-800 mb-4 text-sm uppercase tracking-widest flex items-center gap-2"><Utensils size={16} className="text-teal-500"/> ¿Para qué comidas?</p>
               <div className="flex gap-3">
                 {['lunch', 'dinner'].map((m: any) => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      const newMeals = batchConfig.meals.includes(m)
-                        ? batchConfig.meals.filter((x: any) => x !== m)
-                        : [...batchConfig.meals, m];
-                      if (newMeals.length > 0) setBatchConfig({ ...batchConfig, meals: newMeals });
-                    }}
-                    className={`flex-1 py-4 rounded-[1.2rem] font-black capitalize transition-all duration-300 border-2 active:scale-95 ${
-                      batchConfig.meals.includes(m)
-                        ? 'border-orange-400 bg-orange-50 text-orange-700 shadow-sm'
-                        : 'border-transparent bg-stone-50 text-stone-500 hover:bg-stone-100'
-                    }`}
-                  >
+                  <button key={m} onClick={() => { const newMeals = batchConfig.meals.includes(m) ? batchConfig.meals.filter((x: any) => x !== m) : [...batchConfig.meals, m]; if (newMeals.length > 0) setBatchConfig({ ...batchConfig, meals: newMeals }); }} className={`flex-1 py-4 rounded-[1.2rem] font-black capitalize transition-all border-2 active:scale-95 ${batchConfig.meals.includes(m) ? 'border-orange-400 bg-orange-50 text-orange-700 shadow-sm' : 'border-transparent bg-stone-50 text-stone-500'}`}>
                     {m === 'lunch' ? 'Comidas' : 'Cenas'}
                   </button>
                 ))}
@@ -1357,36 +1156,18 @@ const PlannerView = ({
              <h3 className="font-black text-stone-800">Elige la Magia</h3>
           </div>
           <div className="flex gap-3 mb-8">
-            <button
-              onClick={() => setMode('aprovechamiento')}
-              className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 active:scale-95 ${
-                mode === 'aprovechamiento'
-                  ? 'bg-teal-50 border-teal-300 text-teal-800 shadow-sm'
-                  : 'bg-white border-stone-100 text-stone-500 hover:bg-stone-50'
-              }`}
-            >
+            <button onClick={() => setMode('aprovechamiento')} className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all duration-300 ${mode === 'aprovechamiento' ? 'bg-teal-50 border-teal-300 text-teal-800 shadow-sm' : 'bg-white border-stone-100 text-stone-500 hover:bg-stone-50'}`}>
               <span className="flex items-center gap-1.5 text-sm"><Leaf size={20} className={mode === 'aprovechamiento' ? 'animate-wiggle' : ''}/> CERO SOBRAS</span>
               <span className="text-[10px] font-bold opacity-60">Usa solo lo de tu nevera</span>
             </button>
-            <button
-              onClick={() => setMode('chef')}
-              className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 transition-all duration-300 flex flex-col items-center justify-center gap-1 active:scale-95 ${
-                mode === 'chef'
-                  ? 'bg-orange-50 border-orange-300 text-orange-800 shadow-sm'
-                  : 'bg-white border-stone-100 text-stone-500 hover:bg-stone-50'
-              }`}
-            >
+            <button onClick={() => setMode('chef')} className={`flex-1 py-4 text-xs font-black rounded-[1.5rem] border-2 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all duration-300 ${mode === 'chef' ? 'bg-orange-50 border-orange-300 text-orange-800 shadow-sm' : 'bg-white border-stone-100 text-stone-500 hover:bg-stone-50'}`}>
               <span className="flex items-center gap-1.5 text-sm"><Sparkles size={20} className={mode === 'chef' ? 'animate-pulse' : ''}/> MODO CHEF</span>
-              <span className="text-[10px] font-bold opacity-60">IA con libertad creativa</span>
+              <span className="text-[10px] font-bold opacity-60">El Chef crea libremente</span>
             </button>
           </div>
           
-          <button
-            onClick={onGenerate}
-            className="w-full bg-stone-900 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_15px_40px_rgba(0,0,0,0.25)] active:scale-95 transition-all mt-2 hover:bg-black hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center gap-3 overflow-hidden group"
-          >
-            <ChefHat size={24} className="group-hover:animate-wiggle"/> 
-            <span className="relative z-10">¡Que surja la Magia! ✨</span>
+          <button onClick={onGenerate} className="w-full bg-stone-900 text-white py-6 rounded-[2rem] font-black text-xl shadow-[0_15px_40px_rgba(0,0,0,0.25)] active:scale-95 flex items-center justify-center gap-3 overflow-hidden group hover:bg-black hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all">
+            <ChefHat size={24} className="group-hover:animate-wiggle"/> <span className="relative z-10">¡Que surja la Magia! ✨</span>
             <div className="animate-shimmer absolute inset-0 opacity-20"></div>
           </button>
         </div>
@@ -1396,82 +1177,55 @@ const PlannerView = ({
 
       {plan && !loading && (
         <div className="space-y-6 animate-in slide-in-from-bottom-8">
-          
           {plan.shopping_list && plan.shopping_list.length > 0 && (
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-[2rem] border border-orange-200 shadow-sm flex flex-col items-center text-center mb-6">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-[2rem] border border-orange-200 shadow-sm flex flex-col items-center text-center mb-6 animate-fade-slide">
               <ShoppingBag className="text-orange-500 mb-3 animate-bounce" size={32}/>
               <h3 className="font-black text-orange-900 text-lg mb-2">Faltan {plan.shopping_list.length} cositas</h3>
-              <p className="text-sm text-orange-700 font-medium mb-4">Nuestro Chef virtual dice que necesitarás pasar por el súper para estas recetas.</p>
-              <button
-                onClick={() => onAddMissingToShoppingList(plan.shopping_list || [])}
-                className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-[1.5rem] shadow-[0_8px_20px_rgba(249,115,22,0.3)] transition-all active:scale-95 flex items-center justify-center gap-2"
-              >
+              <p className="text-sm text-orange-700 font-medium mb-4">El Asistente virtual dice que necesitarás pasar por el súper para estas recetas.</p>
+              <button onClick={() => onAddMissingToShoppingList(plan.shopping_list || [])} className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-[1.5rem] shadow-[0_8px_20px_rgba(249,115,22,0.3)] active:scale-95 flex items-center justify-center gap-2 transition-all">
                 <Plus size={18}/> Añadir a la Compra 🛒
               </button>
             </div>
           )}
 
-          {/* LÓGICA DE TINDER SÓLO PARA DAILY PLAN */}
           {plan.type === 'daily' && swipePhase !== 'done' && (
              <div className="mt-4">
-               {swipePhase === 'lunch' && renderTinderCard("Tu Comida", lunchRejected ? (plan.lunch_alt || plan.lunch) : plan.lunch)}
-               {swipePhase === 'dinner' && renderTinderCard("Tu Cena", dinnerRejected ? (plan.dinner_alt || plan.dinner) : plan.dinner)}
+               {swipePhase === 'lunch' && renderTinderCard("Tu Comida", finalLunch)}
+               {swipePhase === 'dinner' && renderTinderCard("Tu Cena", finalDinner)}
              </div>
           )}
 
-          {/* VISTA FINAL (BATCH O DAILY TERMINADO) */}
           {(plan.type === 'batch' || swipePhase === 'done') && (
             <>
-              <h3 className="text-2xl font-black text-stone-800 mb-6 px-2 flex items-center gap-2 animate-fade-slide">
-                <Utensils className="text-teal-500"/> ¡Menú de Campeones! 🏆
-              </h3>
+              <h3 className="text-2xl font-black text-stone-800 mb-6 px-2 flex items-center gap-2 animate-fade-slide"><Utensils className="text-teal-500"/> ¡Menú de Campeones! 🏆</h3>
               
               <div className="space-y-6 mb-10">
-                {(plan.type === 'batch' ? plan.days : [{ day: 1, lunch: lunchRejected ? (plan.lunch_alt || plan.lunch) : plan.lunch, dinner: dinnerRejected ? (plan.dinner_alt || plan.dinner) : plan.dinner }]).map((day: any, idx: number) => (
-                  <div
-                    key={day.day || idx}
-                    className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.04)] animate-fade-slide"
-                    style={{ animationDelay: `${(idx + 1) * 100}ms` }}
-                  >
+                {(daysToRender || []).map((day: any, idx: number) => (
+                  <div key={day.day || idx} className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.04)] animate-fade-slide" style={{ animationDelay: `${(idx + 1) * 100}ms` }}>
                     {plan.type === 'batch' && (
                       <div className="flex items-center gap-2 mb-5">
                         <span className="bg-stone-900 text-white px-4 py-1.5 rounded-xl font-black text-sm shadow-md">Día {day.day}</span>
                       </div>
                     )}
                     <div className="space-y-3">
-                      {/* 🚀 BUG DE PANTALLA BLANCA RESUELTO: Solo abre receta si existe (day.lunch) */}
-                      {day.lunch && (
-                        <div
-                          onClick={() => day.lunch && onViewRecipe(day.lunch)}
-                          className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
-                        >
-                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
-                             {getEmojiForRecipe(day.lunch.title)}
-                           </div>
+                      {day.lunch && day.lunch.title && (
+                        <div onClick={() => onViewRecipe(day.lunch)} className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white border border-transparent hover:border-stone-100 active:scale-[0.98] group transition-all">
+                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">{getEmojiForRecipe(day.lunch.title)}</div>
                           <div className="flex-1 pr-2">
                             <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-0.5">Comida</span>
-                            <h4 className="font-black text-stone-800 text-base leading-tight group-hover:text-teal-600 transition-colors line-clamp-1">{day.lunch.title}</h4>
+                            <h4 className="font-black text-stone-800 text-base leading-tight group-hover:text-teal-600 transition-colors pr-2 pb-1">{day.lunch.title}</h4>
                           </div>
-                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-teal-50 transition-colors shrink-0">
-                            <ChevronRight size={18} className="text-stone-400 group-hover:text-teal-600"/>
-                          </div>
+                          <div className="bg-white p-2 rounded-full shadow-sm shrink-0 group-hover:bg-teal-50 transition-colors"><ChevronRight size={18} className="text-stone-400 group-hover:text-teal-600"/></div>
                         </div>
                       )}
-                      {day.dinner && (
-                        <div
-                          onClick={() => day.dinner && onViewRecipe(day.dinner)}
-                          className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white hover:shadow-md transition-all border border-transparent hover:border-stone-100 active:scale-[0.98] group"
-                        >
-                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
-                             {getEmojiForRecipe(day.dinner.title)}
-                           </div>
+                      {day.dinner && day.dinner.title && (
+                        <div onClick={() => onViewRecipe(day.dinner)} className="bg-stone-50 p-4 rounded-[1.5rem] flex items-center gap-4 cursor-pointer hover:bg-white border border-transparent hover:border-stone-100 active:scale-[0.98] group transition-all">
+                           <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">{getEmojiForRecipe(day.dinner.title)}</div>
                           <div className="flex-1 pr-2">
                             <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest block mb-0.5">Cena</span>
-                            <h4 className="font-black text-stone-800 text-base leading-tight group-hover:text-teal-600 transition-colors line-clamp-1">{day.dinner.title}</h4>
+                            <h4 className="font-black text-stone-800 text-base leading-tight group-hover:text-teal-600 transition-colors pr-2 pb-1">{day.dinner.title}</h4>
                           </div>
-                          <div className="bg-white p-2 rounded-full shadow-sm group-hover:bg-teal-50 transition-colors shrink-0">
-                            <ChevronRight size={18} className="text-stone-400 group-hover:text-teal-600"/>
-                          </div>
+                          <div className="bg-white p-2 rounded-full shadow-sm shrink-0 group-hover:bg-teal-50 transition-colors"><ChevronRight size={18} className="text-stone-400 group-hover:text-teal-600"/></div>
                         </div>
                       )}
                     </div>
@@ -1530,29 +1284,35 @@ const PlannerView = ({
   );
 };
 
-interface RecipeDetailProps { recipe: Recipe; onBack: () => void; onCooked: () => void; onSave: () => void; isSaved: boolean; onAlert: (m:string)=>void; }
 const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: RecipeDetailProps) => {
-  const safeIngredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
-  const safeSteps = Array.isArray(recipe?.steps) ? recipe.steps : [];
+  if (!recipe || !recipe.title) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#FDFBF7] animate-in fade-in">
+        <div className="text-6xl mb-6 animate-wiggle">🌪️</div>
+        <p className="font-black text-xl text-stone-800 mb-2 text-center">¡El Chef ha perdido el papel!</p>
+        <p className="font-medium text-stone-500 mb-10 text-center">Vuelve atrás e intenta abrirlo de nuevo.</p>
+        <button onClick={onBack} className="p-5 bg-stone-900 text-white rounded-[1.5rem] font-black w-full shadow-lg active:scale-95 transition-all">Volver</button>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (POSTHOG_KEY) posthog.capture('recipe_viewed', { title: recipe?.title });
-  }, [recipe]);
+  const safeIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+  const safeSteps = Array.isArray(recipe.steps) ? recipe.steps : [];
 
   const shareRecipe = () => {
-    const ingText = safeIngredients.map(i => `🔸 ${typeof i === 'string' ? i : (i as any).name}`).join('\n');
-    const stepText = safeSteps.map((s, i) => `*${i+1}.* ${s}`).join('\n\n');
-    const txt = `✨ *PlatoPlan presenta:* ✨\n\n🍽️ *${recipe?.title}*\n⏱️ ${recipe?.time || 'Rápido'} | 🔥 ${recipe?.calories || 0} kcal | 💰 Ahorro: ${recipe?.wasteValue || 0}€\n\n🛒 *INGREDIENTES:*\n${ingText}\n\n👨‍🍳 *ELABORACIÓN:*\n${stepText}\n\n👇 *¿Tú también quieres cocinar sin estrés y ahorrar dinero?*\nÚnete a PlatoPlan y haz magia con tu nevera: https://platoplan.vercel.app`;
+    const ingText = safeIngredients.map(i => `🔸 ${typeof i === 'string' ? i : (i as any).name || ''}`).join('\n');
+    let stepText = '';
+    safeSteps.forEach((s, i) => {
+       const text = typeof s === 'string' ? s : (s as any).step || (s as any).text || (s as any).description || '';
+       stepText += `*${i+1}.* ${text}\n\n`;
+    });
+    
+    const txt = `✨ *PlatoPlan presenta:* ✨\n\n🍽️ *${recipe.title}*\n⏱️ ${recipe.time || 'Rápido'} | 🔥 ${recipe.calories || 0} kcal | 💰 Ahorro: ${recipe.wasteValue || 0}€\n\n🛒 *INGREDIENTES:*\n${ingText}\n\n👨‍🍳 *ELABORACIÓN:*\n${stepText}\n👇 *¿Tú también quieres cocinar sin estrés y ahorrar dinero?*\nÚnete a PlatoPlan y haz magia con tu nevera: https://platoplan.vercel.app`;
     
     if (navigator.share) {
-      navigator.share({ title: `Receta PlatoPlan: ${recipe?.title}`, text: txt }).catch(console.error);
+      navigator.share({ title: `Receta PlatoPlan: ${recipe.title}`, text: txt }).catch(console.error);
     } else {
-      const dummy = document.createElement("textarea");
-      document.body.appendChild(dummy);
-      dummy.value = txt;
-      dummy.select();
-      document.execCommand("copy");
-      document.body.removeChild(dummy);
+      const dummy = document.createElement("textarea"); document.body.appendChild(dummy); dummy.value = txt; dummy.select(); document.execCommand("copy"); document.body.removeChild(dummy);
       onAlert("¡Copiado! Listo para mandarlo por WhatsApp. 🚀");
     }
   };
@@ -1560,96 +1320,65 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
   return (
     <div className="p-6 pt-10 pb-32 bg-[#FDFBF7] min-h-screen animate-in slide-in-from-right duration-300 relative z-50">
       <div className="flex justify-between items-center mb-8">
-        <button onClick={onBack} className="bg-white p-4 rounded-full shadow-md border border-stone-100 hover:bg-stone-50 transition-all active:scale-90 hover:-translate-y-0.5">
-          <ArrowLeft size={24} className="text-stone-600"/>
-        </button>
+        <button onClick={onBack} className="bg-white p-4 rounded-full shadow-md active:scale-90 border border-stone-100 hover:bg-stone-50 transition-all hover:-translate-y-0.5"><ArrowLeft size={24} className="text-stone-600"/></button>
         <div className="flex gap-3">
-          <button onClick={shareRecipe} className="bg-white p-4 rounded-full shadow-md border border-stone-100 hover:bg-stone-50 transition-all active:scale-90 text-stone-600 hover:-translate-y-0.5">
-            <Share2 size={24}/>
-          </button>
-          <button onClick={onSave} className={`p-4 rounded-full shadow-md border transition-all active:scale-90 hover:-translate-y-0.5 ${isSaved ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-white border-stone-100 text-stone-600 hover:bg-stone-50'}`}>
+          <button onClick={shareRecipe} className="bg-white p-4 rounded-full shadow-md active:scale-90 text-stone-600 border border-stone-100 hover:bg-stone-50 transition-all hover:-translate-y-0.5"><Share2 size={24}/></button>
+          <button onClick={onSave} className={`p-4 rounded-full shadow-md active:scale-90 border border-stone-100 transition-all hover:-translate-y-0.5 ${isSaved ? 'bg-teal-50 border-teal-200 text-teal-600' : 'bg-white text-stone-600 hover:bg-stone-50'}`}>
             <Bookmark size={24} fill={isSaved ? "currentColor" : "none"}/>
           </button>
         </div>
       </div>
       
-      <h1 className="text-4xl font-black mb-6 leading-tight text-stone-900 tracking-tighter drop-shadow-sm">{recipe?.title}</h1>
+      <h1 className="text-4xl font-black mb-6 leading-tight text-stone-900 tracking-tighter drop-shadow-sm">{recipe.title}</h1>
       
       <div className="flex flex-wrap gap-3 mb-6">
-        <span className="bg-white border border-stone-100 px-4 py-2.5 rounded-[1rem] font-bold text-sm flex items-center gap-2 text-stone-700 shadow-sm">
-          <Clock size={16} className="text-teal-500"/> {recipe?.time || '30m'}
-        </span>
-        <span className="bg-white border border-stone-100 px-4 py-2.5 rounded-[1rem] font-bold text-sm flex items-center gap-2 text-stone-700 shadow-sm">
-          <Flame size={16} className="text-orange-500"/> {recipe?.calories || 0} kcal
-        </span>
-        <span className="bg-teal-50 border border-teal-100 px-4 py-2.5 rounded-[1rem] font-black text-sm flex items-center gap-2 text-teal-700 shadow-sm">
-          <Leaf size={16}/> Salvas {recipe?.wasteValue || 0}€
-        </span>
+        <span className="bg-white border border-stone-100 px-4 py-2.5 rounded-[1rem] font-bold text-sm flex items-center gap-2 shadow-sm"><Clock size={16} className="text-teal-500"/> {recipe.time || '30m'}</span>
+        <span className="bg-white border border-stone-100 px-4 py-2.5 rounded-[1rem] font-bold text-sm flex items-center gap-2 shadow-sm"><Flame size={16} className="text-orange-500"/> {recipe.calories || 0} kcal</span>
       </div>
 
-      {/* 🚀 NUEVO: EL BENEFICIO EN LA VISTA DE LA RECETA */}
-      {recipe?.health_benefit && (
+      {recipe.health_benefit && (
         <div className="mb-10 px-5 py-4 bg-teal-50 rounded-[1.5rem] border border-teal-100 shadow-sm animate-fade-slide">
-          <p className="text-sm font-black text-teal-800 leading-snug">{recipe.health_benefit}</p>
+          <p className="text-sm font-black text-teal-800 leading-snug flex items-center gap-2">✨ {recipe.health_benefit}</p>
         </div>
       )}
       
-      <div className="mb-10 bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.03)] animate-fade-slide" style={{ animationDelay: '50ms' }}>
-        <h3 className="font-black text-2xl mb-6 flex items-center gap-2 text-stone-800">
-          <Scale className="text-orange-500"/> Ingredientes
-        </h3>
+      <div className="mb-10 bg-white p-6 rounded-[2rem] shadow-[0_5px_20px_rgba(0,0,0,0.03)] border border-stone-100 animate-fade-slide">
+        <h3 className="font-black text-2xl mb-6 flex items-center gap-2"><Scale className="text-orange-500"/> Ingredientes</h3>
         <div className="space-y-3">
           {safeIngredients.map((ing: any, i: number) => (
             <div key={i} className="p-4 bg-stone-50/50 rounded-xl font-bold text-sm border border-stone-100 flex items-start gap-3">
               <div className="w-2.5 h-2.5 mt-1 rounded-full bg-teal-500 shrink-0"></div>
-              <span className="text-stone-700 leading-snug">
-                <FormattedText text={typeof ing === 'string' ? ing : (ing.name || '')} />
-              </span>
+              <span className="text-stone-700 leading-snug"><FormattedText text={ing} /></span>
             </div>
           ))}
         </div>
       </div>
       
-      <div className="mb-12 bg-white p-6 rounded-[2rem] border border-stone-100 shadow-[0_5px_20px_rgba(0,0,0,0.03)] animate-fade-slide" style={{ animationDelay: '100ms' }}>
-        <h3 className="font-black text-2xl mb-6 flex items-center gap-2 text-stone-800">
-          <ChefHat className="text-teal-500"/> Elaboración
-        </h3>
+      <div className="mb-12 bg-white p-6 rounded-[2rem] shadow-[0_5px_20px_rgba(0,0,0,0.03)] border border-stone-100 animate-fade-slide" style={{ animationDelay: '100ms' }}>
+        <h3 className="font-black text-2xl mb-6 flex items-center gap-2"><ChefHat className="text-teal-500"/> Elaboración</h3>
         <div className="space-y-8">
           {safeSteps.map((step: any, i: number) => (
             <div key={i} className="flex gap-5 relative group">
-              {i < safeSteps.length - 1 && (
-                <div className="absolute left-[1.1rem] top-12 bottom-[-2rem] w-[3px] bg-stone-100 rounded-full group-hover:bg-teal-200 transition-colors duration-500"></div>
-              )}
-              <div className="shrink-0 w-10 h-10 bg-teal-50 text-teal-600 border-2 border-teal-100 rounded-[1.2rem] flex items-center justify-center text-lg font-black z-10 shadow-sm group-hover:scale-110 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
-                {i + 1}
-              </div>
-              <p className="font-medium text-stone-600 pt-1.5 leading-relaxed text-[15px]">
-                <FormattedText text={step} />
-              </p>
+              {i < safeSteps.length - 1 && <div className="absolute left-[1.1rem] top-12 bottom-[-2rem] w-[3px] bg-stone-100 rounded-full group-hover:bg-teal-200 transition-colors duration-500"></div>}
+              <div className="shrink-0 w-10 h-10 bg-teal-50 text-teal-600 border-2 border-teal-100 rounded-[1.2rem] flex items-center justify-center text-lg font-black z-10 shadow-sm group-hover:scale-110 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">{i + 1}</div>
+              <p className="font-medium text-stone-600 pt-1.5 leading-relaxed text-[15px]"><FormattedText text={step} /></p>
             </div>
           ))}
         </div>
       </div>
       
-      <button
-        onClick={onCooked}
-        className="w-full py-6 bg-stone-900 text-white rounded-[2rem] font-black text-xl shadow-[0_15px_40px_rgba(0,0,0,0.2)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:-translate-y-1 active:scale-95 transition-all flex justify-center gap-3 items-center border-4 border-stone-800 animate-fade-slide"
-        style={{ animationDelay: '200ms' }}
-      >
+      <button onClick={onCooked} className="w-full py-6 bg-stone-900 text-white rounded-[2rem] font-black text-xl shadow-[0_15px_40px_rgba(0,0,0,0.2)] active:scale-95 flex justify-center gap-3 items-center hover:bg-black hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all animate-fade-slide" style={{ animationDelay: '200ms' }}>
         <CheckCircle2 size={28} className="animate-wiggle"/> ¡Plato terminado! 🤤
       </button>
     </div>
   );
 };
 
-interface ConsumptionModalProps { recipe: Recipe; ingredients: Ingredient[]; onConfirm: (c: string[]) => void; onClose: () => void; }
 const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: ConsumptionModalProps) => {
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const relevant = useMemo(() => {
     const match = ingredients.filter((ing: any) =>
-      safeRecIngs.some((ri: any) =>
-        (typeof ri === 'string' ? ri : (ri.name || '')).toLowerCase().includes(ing.name.toLowerCase())
-      )
+      safeRecIngs.some((ri: any) => (typeof ri === 'string' ? ri : (ri.name || '')).toLowerCase().includes(ing.name.toLowerCase()))
     );
     return match.length > 0 ? match : ingredients;
   }, [recipe, ingredients]);
@@ -1660,29 +1389,18 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
   return (
     <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-md flex items-end justify-center p-4 z-[100] animate-in fade-in duration-300">
       <div className="glass-modal w-full max-w-md rounded-[3rem] p-8 shadow-[0_-20px_60px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom-8 border-t border-white/50 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-rose-400"></div>
         <div className="w-16 h-1.5 bg-stone-300/50 rounded-full mx-auto mb-8"></div>
         <div className="flex justify-center mb-6"><PartyPopper size={48} className="text-orange-500 animate-wiggle"/></div>
         
         <h2 className="text-3xl font-black mb-2 text-center text-stone-900 tracking-tight">¡Eres un artista! 🧑‍🍳</h2>
         <p className="text-center text-stone-500 mb-8 font-medium text-base px-2">
-          Has salvado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b> de la basura 💸. ¿Qué ingredientes te has <b>terminado por completo</b>? Márcalos para borrarlos:
+          Has salvado <b className="text-teal-600">{recipe?.wasteValue || 0}€</b>. ¿Qué te has <b>terminado por completo</b>? Márcalos para borrarlos:
         </p>
         
         <div className="space-y-3 mb-10 max-h-64 overflow-y-auto no-scrollbar pb-4 px-2">
           {relevant.map((ing: any) => (
-            <div
-              key={ing.id}
-              onClick={() => toggle(ing.id)}
-              className={`flex items-center gap-4 p-5 rounded-[1.5rem] border transition-all duration-300 cursor-pointer active:scale-[0.98] ${
-                selected.includes(ing.id)
-                  ? 'bg-white border-teal-400 shadow-[0_5px_15px_rgba(20,184,166,0.15)] transform scale-[1.02]'
-                  : 'bg-stone-50/80 border-stone-200 hover:bg-white hover:shadow-sm'
-              }`}
-            >
-              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${
-                selected.includes(ing.id) ? 'bg-teal-500 border-teal-500' : 'border-stone-300 bg-white'
-              }`}>
+            <div key={ing.id} onClick={() => toggle(ing.id)} className={`flex items-center gap-4 p-5 rounded-[1.5rem] border cursor-pointer active:scale-[0.98] transition-all duration-300 ${selected.includes(ing.id) ? 'bg-white border-teal-400 shadow-[0_5px_15px_rgba(20,184,166,0.15)] transform scale-[1.02]' : 'bg-stone-50/80 border-stone-200 hover:bg-white hover:shadow-sm'}`}>
+              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors duration-300 ${selected.includes(ing.id) ? 'bg-teal-500 border-teal-500' : 'border-stone-300 bg-white'}`}>
                 {selected.includes(ing.id) && <Check size={16} className="text-white animate-pop-in" strokeWidth={3}/>}
               </div>
               <span className={`font-black text-lg transition-colors ${selected.includes(ing.id) ? 'text-stone-800' : 'text-stone-500'}`}>{ing.name}</span>
@@ -1691,67 +1409,35 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
         </div>
         
         <div className="flex gap-4">
-          <button onClick={onClose} className="flex-1 py-5 bg-white border border-stone-200 rounded-[1.5rem] font-black text-stone-600 hover:bg-stone-50 transition-all active:scale-95 text-sm uppercase tracking-widest shadow-sm">
-            Atrás
-          </button>
-          <button
-            onClick={() => onConfirm(selected)}
-            className="flex-[2] py-5 bg-[#5CB82C] text-white rounded-[1.5rem] font-black shadow-[0_10px_25px_rgba(92,184,44,0.4)] active:scale-95 transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#4a9c22]"
-          >
-            <Save size={18}/> Guardar Éxito 📖
-          </button>
+          <button onClick={onClose} className="flex-1 py-5 bg-white border border-stone-200 rounded-[1.5rem] font-black text-stone-600 active:scale-95 text-sm uppercase tracking-widest shadow-sm transition-all hover:bg-stone-50">Atrás</button>
+          <button onClick={() => onConfirm(selected)} className="flex-[2] py-5 bg-[#5CB82C] text-white rounded-[1.5rem] font-black active:scale-95 text-sm uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_10px_25px_rgba(92,184,44,0.4)] transition-all hover:bg-[#4a9c22]"><Save size={18}/> Guardar Éxito</button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- 8. MAIN APP ---
 export default function App() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [alertMessage, setAlertMessage] = useState(''); 
   const [confirmAction, setConfirmAction] = useState<{ message: string, onConfirm: () => void } | null>(null);
   
   const [profile, setProfile] = useState<UserProfile>(() => {
-    try {
-      const s = localStorage.getItem('platoplan_profile');
-      if (s) {
-        const p = JSON.parse(s);
-        if (typeof p.allergies === 'string') p.allergies = [p.allergies];
-        if (!Array.isArray(p.allergies)) p.allergies = [];
-        if (!p.style) p.style = "Clásica";
-        return p;
-      }
-    } catch (e) {}
+    try { const s = localStorage.getItem('platoplan_profile'); if (s) { const p = JSON.parse(s); if (typeof p.allergies === 'string') p.allergies = [p.allergies]; if (!Array.isArray(p.allergies)) p.allergies = []; if (!p.style) p.style = "Clásica"; return p; } } catch (e) {}
     return { name: 'Chef', style: 'Clásica', allergies: [], people: 2, ages: '', robot: '' };
   });
   
-  const [view, setView] = useState<ViewState>(() => {
-    return (localStorage.getItem('platoplan_current_view') as ViewState) || 'auth';
-  });
-
+  const [view, setView] = useState<ViewState>(() => { return (localStorage.getItem('platoplan_current_view') as ViewState) || 'auth'; });
   const [savings, setSavings] = useState(() => parseFloat(localStorage.getItem('platoplan_savings') || '0'));
   const [wasteSaved, setWasteSaved] = useState(() => parseFloat(localStorage.getItem('platoplan_waste') || '0'));
-  
   const [streak, setStreak] = useState(() => parseInt(localStorage.getItem('platoplan_streak') || '0'));
   const [lastCookDate, setLastCookDate] = useState(() => localStorage.getItem('platoplan_last_cook') || '');
 
-  const [ingredients, setIngredients] = useState<Ingredient[]>(() => {
-    try { return JSON.parse(localStorage.getItem('platoplan_pantry') || '[]'); } catch (e) { return []; }
-  });
-  const [history, setHistory] = useState<Recipe[]>(() => {
-    try { return JSON.parse(localStorage.getItem('platoplan_history') || '[]'); } catch (e) { return []; }
-  });
-  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>(() => {
-    try { return JSON.parse(localStorage.getItem('platoplan_list') || '[]'); } catch (e) { return []; }
-  });
-  
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(() => {
-    try { return JSON.parse(localStorage.getItem('platoplan_selected_recipe') || 'null'); } catch(e) { return null; }
-  });
-  const [plan, setPlan] = useState<MealPlan | null>(() => {
-    try { return JSON.parse(localStorage.getItem('platoplan_current_plan') || 'null'); } catch(e) { return null; }
-  });
+  const [ingredients, setIngredients] = useState<Ingredient[]>(() => { try { return JSON.parse(localStorage.getItem('platoplan_pantry') || '[]'); } catch (e) { return []; } });
+  const [history, setHistory] = useState<Recipe[]>(() => { try { return JSON.parse(localStorage.getItem('platoplan_history') || '[]'); } catch (e) { return []; } });
+  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>(() => { try { return JSON.parse(localStorage.getItem('platoplan_list') || '[]'); } catch (e) { return []; } });
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(() => { try { return JSON.parse(localStorage.getItem('platoplan_selected_recipe') || 'null'); } catch(e) { return null; } });
+  const [plan, setPlan] = useState<MealPlan | null>(() => { try { return JSON.parse(localStorage.getItem('platoplan_current_plan') || 'null'); } catch(e) { return null; } });
   
   const [loading, setLoading] = useState(false);
   const [loadingStartTime, setLoadingStartTime] = useState(0); 
@@ -1770,55 +1456,28 @@ export default function App() {
   useEffect(() => {
     window.history.replaceState({ view }, '');
     const handlePopState = (event: PopStateEvent) => {
-      if (event.state && event.state.view) {
-        setView(event.state.view);
-        localStorage.setItem('platoplan_current_view', event.state.view);
-      } else {
-        setView('dashboard');
-        localStorage.setItem('platoplan_current_view', 'dashboard');
-      }
+      if (event.state && event.state.view) { setView(event.state.view); localStorage.setItem('platoplan_current_view', event.state.view); } 
+      else { setView('dashboard'); localStorage.setItem('platoplan_current_view', 'dashboard'); }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUser(session.user);
-        loadCloudData(session.user.id);
-      } else {
-        setGlobalLoading(false);
-        navigateTo('auth');
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadCloudData(session.user.id);
-      } else {
-        navigateTo('auth');
-      }
-    });
+    supabase.auth.getSession().then(({ data: { session } }) => { if (session) { setUser(session.user); loadCloudData(session.user.id); } else { setGlobalLoading(false); navigateTo('auth'); } });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { setUser(session?.user ?? null); if (session?.user) { loadCloudData(session.user.id); } else { navigateTo('auth'); } });
     return () => subscription.unsubscribe();
   }, []);
 
   const loadCloudData = async (uid: string) => {
     const localProfileStr = localStorage.getItem('platoplan_profile');
     if (localProfileStr) {
-      const localProfile = JSON.parse(localProfileStr);
-      setProfile(localProfile);
+      setProfile(JSON.parse(localProfileStr));
       const currentStoredView = localStorage.getItem('platoplan_current_view') as ViewState;
-      if (!currentStoredView || currentStoredView === 'auth') {
-         navigateTo('dashboard');
-      } else {
-         navigateTo(currentStoredView);
-      }
+      if (!currentStoredView || currentStoredView === 'auth') navigateTo('dashboard');
+      else navigateTo(currentStoredView);
       setGlobalLoading(false); 
-    } else {
-      setGlobalLoading(true);
-    }
+    } else setGlobalLoading(true);
 
     try {
       const { data: p } = await supabase.from('profiles').select('*').eq('id', uid).single();
@@ -1827,144 +1486,61 @@ export default function App() {
       const { data: l } = await supabase.from('shopping_list').select('*').eq('user_id', uid);
       
       if (p) {
-        let safeAlg = p.allergies;
-        if (typeof safeAlg === 'string') safeAlg = [safeAlg];
-        if (!Array.isArray(safeAlg)) safeAlg = [];
+        let safeAlg = Array.isArray(p.allergies) ? p.allergies : (typeof p.allergies === 'string' ? [p.allergies] : []);
         setProfile({ ...p, allergies: safeAlg });
-        setSavings(p.savings || 0);
-        setWasteSaved(p.waste_saved || 0);
+        setSavings(p.savings || 0); setWasteSaved(p.waste_saved || 0);
         if (!localProfileStr) navigateTo('dashboard');
       } else if (localProfileStr) {
-        const localProfile = JSON.parse(localProfileStr);
-        await supabase.from('profiles').upsert({
-          id: uid,
-          name: localProfile.name,
-          style: localProfile.style,
-          allergies: localProfile.allergies,
-          people: localProfile.people,
-          ages: localProfile.ages,
-          robot: localProfile.robot
-        });
-      } else {
-        navigateTo('onboarding');
-      }
+        const localP = JSON.parse(localProfileStr);
+        await supabase.from('profiles').upsert({ id: uid, name: localP.name, style: localP.style, allergies: localP.allergies, people: localP.people, ages: localP.ages, robot: localP.robot });
+      } else navigateTo('onboarding');
 
       if (i && i.length > 0) setIngredients(i.map((x: any) => ({ ...x, expiryStatus: x.expiry_status })));
       if (h && h.length > 0) setHistory(h.map((x: any) => ({ ...x.recipe_data, date: x.date, id: x.recipe_data.id || Date.now().toString() })));
       if (l && l.length > 0) setShoppingList(l);
       
-      if (POSTHOG_KEY && typeof posthog !== 'undefined' && posthog.identify) {
-        posthog.identify(uid, { email: user?.email });
-      }
-      if (isOneSignalInitialized && typeof OneSignal !== 'undefined') {
-        OneSignal.setExternalUserId(uid);
-      }
-      
-    } catch (err) {
-      console.error("Sincronización falló:", err);
-    }
+      if (POSTHOG_KEY && typeof posthog !== 'undefined' && posthog.identify) posthog.identify(uid, { email: user?.email });
+      if (isOneSignalInitialized && typeof OneSignal !== 'undefined') OneSignal.setExternalUserId(uid);
+    } catch (err) {}
     setGlobalLoading(false);
   };
 
   const saveProfileCloud = useCallback(async (p: UserProfile) => {
-    setProfile(p);
-    localStorage.setItem('platoplan_profile', JSON.stringify(p));
-    if (user) {
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        name: p.name,
-        style: p.style,
-        allergies: p.allergies,
-        people: p.people,
-        ages: p.ages,
-        robot: p.robot
-      });
-    }
-    if (POSTHOG_KEY) posthog.capture('profile_updated', { style: p.style, people: p.people });
+    setProfile(p); localStorage.setItem('platoplan_profile', JSON.stringify(p));
+    if (user) await supabase.from('profiles').upsert({ id: user.id, name: p.name, style: p.style, allergies: p.allergies, people: p.people, ages: p.ages, robot: p.robot });
   }, [user]);
 
   const updatePantry = useCallback(async (newIngs: Ingredient[]) => {
-    setIngredients(newIngs);
-    localStorage.setItem('platoplan_pantry', JSON.stringify(newIngs));
-    if (user) {
-      await supabase.from('pantry').delete().eq('user_id', user.id);
-      if (newIngs.length > 0) {
-        await supabase.from('pantry').insert(
-          newIngs.map(x => ({
-            user_id: user.id,
-            id: x.id,
-            name: x.name,
-            quantity: x.quantity,
-            expiry_status: x.expiryStatus,
-            category: x.category
-          }))
-        );
-      }
-    }
+    setIngredients(newIngs); localStorage.setItem('platoplan_pantry', JSON.stringify(newIngs));
+    if (user) { await supabase.from('pantry').delete().eq('user_id', user.id); if (newIngs.length > 0) await supabase.from('pantry').insert(newIngs.map(x => ({ user_id: user.id, id: x.id, name: x.name, quantity: x.quantity, expiry_status: x.expiryStatus, category: x.category }))); }
   }, [user]);
 
   const updateList = useCallback(async (newList: ShoppingItem[]) => {
-    setShoppingList(newList);
-    localStorage.setItem('platoplan_list', JSON.stringify(newList));
-    if (user) {
-      await supabase.from('shopping_list').delete().eq('user_id', user.id);
-      if (newList.length > 0) {
-        await supabase.from('shopping_list').insert(
-          newList.map(x => ({
-            user_id: user.id,
-            id: x.id,
-            name: x.name,
-            checked: x.checked
-          }))
-        );
-      }
-    }
+    setShoppingList(newList); localStorage.setItem('platoplan_list', JSON.stringify(newList));
+    if (user) { await supabase.from('shopping_list').delete().eq('user_id', user.id); if (newList.length > 0) await supabase.from('shopping_list').insert(newList.map(x => ({ user_id: user.id, id: x.id, name: x.name, checked: x.checked }))); }
   }, [user]);
 
   const handleSaveRecipe = async (recipeToSave: Recipe) => {
     const safeId = recipeToSave.id || Date.now().toString();
     const isAlreadyInHistory = history.some(h => h.id === safeId || (h.title === recipeToSave.title && h.date === new Date().toLocaleDateString()));
-    
     if (!isAlreadyInHistory) {
       const recipeWithId = { ...recipeToSave, id: safeId, date: new Date().toLocaleDateString() };
       const newHistory = [recipeWithId, ...history];
-      setHistory(newHistory);
-      localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
-
-      if (user) {
-        await supabase.from('history').insert({
-          user_id: user.id,
-          title: recipeWithId.title,
-          calories: recipeWithId.calories,
-          waste_value: recipeWithId.wasteValue,
-          date: recipeWithId.date,
-          recipe_data: recipeWithId
-        });
-      }
+      setHistory(newHistory); localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+      if (user) await supabase.from('history').insert({ user_id: user.id, title: recipeWithId.title, calories: recipeWithId.calories, waste_value: recipeWithId.wasteValue, date: recipeWithId.date, recipe_data: recipeWithId });
       setAlertMessage("¡Hechizo guardado en tu recetario para hacerlo cuando quieras! 📖✨");
-      if (POSTHOG_KEY) posthog.capture('recipe_bookmarked', { title: recipeToSave.title });
-    } else {
-      setAlertMessage("¡Eh! Esta receta ya la tienes guardada a buen recaudo. 😉");
-    }
+    } else { setAlertMessage("¡Eh! Esta receta ya la tienes guardada a buen recaudo. 😉"); }
   };
 
   const handleDeleteRecipe = useCallback((indexToDelete: number) => {
     const recipe = history[indexToDelete];
     if (!recipe) return;
-
     setConfirmAction({
       message: `¿Quieres borrar "${recipe.title}" de tu recetario para siempre? 🥺`,
       onConfirm: async () => {
         const newHistory = history.filter((_, i) => i !== indexToDelete);
-        setHistory(newHistory);
-        localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
-        if (user) {
-          if (recipe.id) {
-            await supabase.from('history').delete().eq('user_id', user.id).eq('recipe_data->>id', recipe.id);
-          } else {
-            await supabase.from('history').delete().eq('user_id', user.id).eq('title', recipe.title);
-          }
-        }
+        setHistory(newHistory); localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+        if (user) { if (recipe.id) await supabase.from('history').delete().eq('user_id', user.id).eq('recipe_data->>id', recipe.id); else await supabase.from('history').delete().eq('user_id', user.id).eq('title', recipe.title); }
         setConfirmAction(null);
       }
     });
@@ -1973,35 +1549,22 @@ export default function App() {
   const handleClearHistory = useCallback(() => {
     setConfirmAction({
       message: "¿Seguro que quieres borrar TODAS tus obras de arte? Tu recetario quedará totalmente en blanco. 😱",
-      onConfirm: async () => {
-        setHistory([]);
-        localStorage.setItem('platoplan_history', '[]');
-        if (user) await supabase.from('history').delete().eq('user_id', user.id);
-        if (POSTHOG_KEY) posthog.capture('history_cleared');
-        setConfirmAction(null);
-      }
+      onConfirm: async () => { setHistory([]); localStorage.setItem('platoplan_history', '[]'); if (user) await supabase.from('history').delete().eq('user_id', user.id); setConfirmAction(null); }
     });
   }, [user]);
 
   const generate = useCallback(async () => {
-    if (!GEMINI_API_KEY) return setAlertMessage("Falta configurar la llave mágica de la IA. Tu cocina no tiene luz ahora mismo. 🔌");
-    if (ingredients.length === 0 && mode === 'aprovechamiento') return setAlertMessage("¡Tu nevera está vacía! Añade algún ingrediente para hacer magia de aprovechamiento. 🧊");
-    
-    setLoading(true);
-    setLoadingStartTime(Date.now()); 
-    
+    if (!GEMINI_API_KEY) return setAlertMessage("Falta la clave mágica del Chef (API KEY). 🔌");
+    if (ingredients.length === 0 && mode === 'aprovechamiento') return setAlertMessage("¡Tu nevera está vacía! Añade algo para hacer magia de aprovechamiento. 🧊");
+    setLoading(true); setLoadingStartTime(Date.now()); 
     const data = await generateRealPlan(GEMINI_API_KEY, ingredients, profile, mode, planType, batchConfig, setAlertMessage);
     if (data) {
       if (data.lunch) data.lunch.id = Date.now().toString() + "-L";
       if (data.dinner) data.dinner.id = Date.now().toString() + "-D";
       if (data.lunch_alt) data.lunch_alt.id = Date.now().toString() + "-LA";
       if (data.dinner_alt) data.dinner_alt.id = Date.now().toString() + "-DA";
-      
-      setPlan(data);
-      localStorage.setItem('platoplan_current_plan', JSON.stringify(data));
-    } else {
-      setAlertMessage("Vaya, la cocina está patas arriba. Inténtalo de nuevo en un momentito. 👨‍🍳");
-    }
+      setPlan(data); localStorage.setItem('platoplan_current_plan', JSON.stringify(data));
+    } else { setAlertMessage("Vaya, el Chef ha tenido un despiste. Inténtalo de nuevo. 👨‍🍳"); }
     setLoading(false);
   }, [ingredients, profile, mode, planType, batchConfig]);
 
@@ -2010,54 +1573,28 @@ export default function App() {
       const today = new Date().toDateString();
       let newStreak = streak;
       if (lastCookDate !== today) {
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        if (lastCookDate === yesterday.toDateString()) {
-           newStreak += 1; 
-        } else {
-           newStreak = 1; 
-        }
-        setStreak(newStreak);
-        setLastCookDate(today);
-        localStorage.setItem('platoplan_streak', newStreak.toString());
-        localStorage.setItem('platoplan_last_cook', today);
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+        if (lastCookDate === yesterday.toDateString()) newStreak += 1; else newStreak = 1; 
+        setStreak(newStreak); setLastCookDate(today); localStorage.setItem('platoplan_streak', newStreak.toString()); localStorage.setItem('platoplan_last_cook', today);
       }
 
       const newSavings = savings + Math.max(0, (15 * profile.people) - (selectedRecipe.priceEstimate || 0));
       const newWaste = wasteSaved + (selectedRecipe.wasteValue || 0);
-      
       const safeId = selectedRecipe.id || Date.now().toString();
       const isAlreadyInHistory = history.some(h => h.id === safeId || (h.title === selectedRecipe.title && h.date === new Date().toLocaleDateString()));
       
       if (!isAlreadyInHistory) {
         const recipeWithId = { ...selectedRecipe, id: safeId, date: new Date().toLocaleDateString() };
         const newHistory = [recipeWithId, ...history];
-        setHistory(newHistory);
-        localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
-        if (user) {
-          await supabase.from('history').insert({
-            user_id: user.id,
-            title: recipeWithId.title,
-            calories: recipeWithId.calories,
-            waste_value: recipeWithId.wasteValue,
-            date: recipeWithId.date,
-            recipe_data: recipeWithId
-          });
-        }
+        setHistory(newHistory); localStorage.setItem('platoplan_history', JSON.stringify(newHistory));
+        if (user) await supabase.from('history').insert({ user_id: user.id, title: recipeWithId.title, calories: recipeWithId.calories, waste_value: recipeWithId.wasteValue, date: recipeWithId.date, recipe_data: recipeWithId });
       }
       
-      setSavings(newSavings);
-      setWasteSaved(newWaste);
-      localStorage.setItem('platoplan_savings', newSavings.toString());
-      localStorage.setItem('platoplan_waste', newWaste.toString());
+      setSavings(newSavings); setWasteSaved(newWaste); localStorage.setItem('platoplan_savings', newSavings.toString()); localStorage.setItem('platoplan_waste', newWaste.toString());
       if (user) await supabase.from('profiles').update({ savings: newSavings, waste_saved: newWaste }).eq('id', user.id);
-      
       updatePantry(ingredients.filter(i => !consumed.includes(i.id)));
-      if (POSTHOG_KEY) posthog.capture('recipe_cooked', { recipe_title: selectedRecipe.title, waste_saved: selectedRecipe.wasteValue });
       
-      setShowConfirm(false);
-      setSelectedRecipe(null);
-      localStorage.removeItem('platoplan_selected_recipe');
+      setShowConfirm(false); setSelectedRecipe(null); localStorage.removeItem('platoplan_selected_recipe');
       setAlertMessage(newStreak > 1 ? `¡BOOM! Sumas ahorro y tu racha sube a ${newStreak} días seguidos 🔥🐷` : "¡Receta completada! Hemos sumado tu ahorro a la Hucha Feliz. 🐷💸");
       navigateTo('dashboard'); 
     }
@@ -2065,74 +1602,26 @@ export default function App() {
 
   const handleAddMissingToShoppingList = useCallback((missingItems: string[]) => {
     if (!missingItems || missingItems.length === 0) return;
-    
     let updatedList = [...shoppingList];
-
     const parseItem = (str: string) => {
         const match = str.trim().match(/^([\d.,]+)\s*([a-zA-Z]+)?\s+(de\s+)?(.*)$/i);
-        if (match) {
-            return {
-                amount: parseFloat(match[1].replace(',', '.')),
-                unit: (match[2] || '').toLowerCase(),
-                name: match[4].toLowerCase().trim(),
-                originalName: match[4].trim(),
-            };
-        }
+        if (match) return { amount: parseFloat(match[1].replace(',', '.')), unit: (match[2] || '').toLowerCase(), name: match[4].toLowerCase().trim(), originalName: match[4].trim() };
         return { amount: 0, unit: '', name: str.toLowerCase().trim(), originalName: str.trim() };
     };
-
     missingItems.forEach(newItemStr => {
         const newItem = parseItem(newItemStr);
-        let foundIndex = -1;
-
-        for (let i = 0; i < updatedList.length; i++) {
-            const existingItem = parseItem(updatedList[i].name);
-            if (existingItem.name === newItem.name || existingItem.name.includes(newItem.name) || newItem.name.includes(existingItem.name)) {
-                foundIndex = i;
-                break;
-            }
-        }
-
+        let foundIndex = updatedList.findIndex(i => parseItem(i.name).name === newItem.name || parseItem(i.name).name.includes(newItem.name) || newItem.name.includes(parseItem(i.name).name));
         if (foundIndex !== -1) {
             const existingItem = parseItem(updatedList[foundIndex].name);
-
             if (existingItem.amount > 0 && newItem.amount > 0 && existingItem.unit === newItem.unit) {
-                const total = existingItem.amount + newItem.amount;
-                updatedList[foundIndex] = {
-                    ...updatedList[foundIndex],
-                    name: `${total} ${newItem.unit} ${newItem.originalName}`,
-                    checked: false 
-                };
+                updatedList[foundIndex] = { ...updatedList[foundIndex], name: `${existingItem.amount + newItem.amount} ${newItem.unit} ${newItem.originalName}`, checked: false };
             } else if (existingItem.amount === 0 && newItem.amount > 0) {
-                 updatedList[foundIndex] = {
-                    ...updatedList[foundIndex],
-                    name: `${newItem.amount} ${newItem.unit} ${newItem.originalName}`,
-                    checked: false
-                };
-            } else {
-                 updatedList.unshift({
-                    id: Date.now().toString() + Math.random().toString(),
-                    name: newItemStr,
-                    checked: false
-                 });
-            }
-        } else {
-            updatedList.unshift({
-                id: Date.now().toString() + Math.random().toString(),
-                name: newItemStr,
-                checked: false
-            });
-        }
+                 updatedList[foundIndex] = { ...updatedList[foundIndex], name: `${newItem.amount} ${newItem.unit} ${newItem.originalName}`, checked: false };
+            } else updatedList.unshift({ id: Date.now().toString() + Math.random().toString(), name: newItemStr, checked: false });
+        } else updatedList.unshift({ id: Date.now().toString() + Math.random().toString(), name: newItemStr, checked: false });
     });
-    
-    updateList(updatedList);
-    setAlertMessage("¡Hecho! Hemos metido los ingredientes que te faltan en tu carrito del súper. 🛒");
-    if (plan) {
-      const newPlan = { ...plan, shopping_list: [] };
-      setPlan(newPlan);
-      localStorage.setItem('platoplan_current_plan', JSON.stringify(newPlan));
-    }
-    if (POSTHOG_KEY) posthog.capture('missing_added_to_shopping', { count: missingItems.length });
+    updateList(updatedList); setAlertMessage("¡Hecho! Añadido a tu carrito del súper. 🛒");
+    if (plan) { const newPlan = { ...plan, shopping_list: [] }; setPlan(newPlan); localStorage.setItem('platoplan_current_plan', JSON.stringify(newPlan)); }
   }, [shoppingList, updateList, plan]);
 
   const handleLogout = useCallback(async () => {
@@ -2143,172 +1632,50 @@ export default function App() {
     window.location.reload();
   }, []);
 
-  if (globalLoading) {
-    return (
-      <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-teal-500 mb-4"/>
-        <p className="font-bold text-stone-500">Encendiendo los fogones...</p>
-      </div>
-    );
-  }
-
+  if (globalLoading) return <div className="min-h-screen bg-[#FDFBF7] flex flex-col items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-teal-500 mb-4"/><p className="font-bold text-stone-500">Encendiendo los fogones...</p></div>;
   if (view === 'auth') return <AuthView onAlert={setAlertMessage} />;
-  if (view === 'onboarding') return (
-    <OnboardingView onComplete={() => { saveProfileCloud(profile); navigateTo('dashboard'); }} />
-  );
+  if (view === 'onboarding') return <OnboardingView onComplete={() => { saveProfileCloud(profile); navigateTo('dashboard'); }} />;
 
   const urgentCount = ingredients.filter(i => i.expiryStatus === 'urgent').length;
 
   return (
     <div className="h-[100dvh] bg-[#FDFBF7] flex flex-col font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden text-stone-800 selection:bg-teal-200">
-      
       <CustomAlert message={alertMessage} onClose={() => setAlertMessage('')} />
-      {confirmAction && (
-        <CustomConfirm 
-          message={confirmAction.message} 
-          onConfirm={confirmAction.onConfirm} 
-          onCancel={() => setConfirmAction(null)} 
-        />
-      )}
+      {confirmAction && <CustomConfirm message={confirmAction.message} onConfirm={confirmAction.onConfirm} onCancel={() => setConfirmAction(null)} />}
 
       <main className="flex-1 overflow-y-auto no-scrollbar pb-32 scroll-smooth">
-        {view === 'dashboard' && (
-          <DashboardView
-            savings={savings}
-            wasteSaved={wasteSaved}
-            totalItems={ingredients.length}
-            profileName={profile.name}
-            urgentCount={urgentCount}
-            onViewPantry={() => navigateTo('pantry')}
-            streak={streak}
-          />
-        )}
-        {view === 'pantry' && (
-          <PantryView 
-            ingredients={ingredients} 
-            setIngredients={updatePantry} 
+        {view === 'dashboard' && <DashboardView savings={savings} wasteSaved={wasteSaved} totalItems={ingredients.length} profileName={profile.name} urgentCount={urgentCount} onViewPantry={() => navigateTo('pantry')} streak={streak} />}
+        {view === 'pantry' && <PantryView ingredients={ingredients} setIngredients={updatePantry} onAlert={setAlertMessage} />}
+        {view === 'shopping' && <ShoppingView list={shoppingList} setList={updateList} onAlert={setAlertMessage} />}
+        {view === 'history' && <HistoryView history={history} onDeleteAll={handleClearHistory} onDeleteRecipe={handleDeleteRecipe} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} />}
+        {view === 'planner' && <PlannerView plan={plan} onReset={() => { setPlan(null); localStorage.removeItem('platoplan_current_plan'); }} loading={loading} loadingStartTime={loadingStartTime} onGenerate={generate} planType={planType} setPlanType={setPlanType} batchConfig={batchConfig} setBatchConfig={setBatchConfig} mode={mode} setMode={setMode} profile={profile} setProfile={saveProfileCloud} onLogout={handleLogout} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} onAddMissingToShoppingList={handleAddMissingToShoppingList} onAlert={setAlertMessage} />}
+        
+        {/* 🚀 BUG DE PANTALLA BLANCA SOLUCIONADO AQUÍ: */}
+        {view === 'recipe-detail' && (
+          <RecipeDetail 
+            recipe={selectedRecipe as Recipe} 
+            onBack={() => { 
+              localStorage.removeItem('platoplan_selected_recipe'); 
+              const prevView = history.some(h => h.id === selectedRecipe?.id || h.title === selectedRecipe?.title) ? 'history' : 'planner'; 
+              navigateTo(prevView); 
+            }} 
+            onCooked={() => setShowConfirm(true)} 
+            onSave={() => { if(selectedRecipe) handleSaveRecipe(selectedRecipe); }} 
+            isSaved={history.some(h => h.id === selectedRecipe?.id || h.title === selectedRecipe?.title)} 
             onAlert={setAlertMessage} 
-          />
-        )}
-        {view === 'shopping' && (
-          <ShoppingView list={shoppingList} setList={updateList} onAlert={setAlertMessage} />
-        )}
-        {view === 'history' && (
-          <HistoryView 
-            history={history} 
-            onDeleteAll={handleClearHistory}
-            onDeleteRecipe={handleDeleteRecipe} 
-            onViewRecipe={(r: Recipe) => { 
-              setSelectedRecipe(r); 
-              localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r));
-              navigateTo('recipe-detail'); 
-            }} 
-          />
-        )}
-        {view === 'planner' && (
-          <PlannerView
-            plan={plan}
-            onReset={() => {
-              setPlan(null);
-              localStorage.removeItem('platoplan_current_plan'); 
-            }}
-            loading={loading}
-            loadingStartTime={loadingStartTime}
-            onGenerate={generate}
-            planType={planType}
-            setPlanType={setPlanType}
-            batchConfig={batchConfig}
-            setBatchConfig={setBatchConfig}
-            mode={mode}
-            setMode={setMode}
-            profile={profile}
-            setProfile={saveProfileCloud}
-            onLogout={handleLogout}
-            onViewRecipe={(r: Recipe) => { 
-              setSelectedRecipe(r); 
-              localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r));
-              navigateTo('recipe-detail'); 
-            }}
-            onAddMissingToShoppingList={handleAddMissingToShoppingList}
-            onAlert={setAlertMessage}
-          />
-        )}
-        {view === 'recipe-detail' && selectedRecipe && (
-          <RecipeDetail
-            recipe={selectedRecipe}
-            onBack={() => {
-              localStorage.removeItem('platoplan_selected_recipe');
-              const prevView = history.some(h => h.id === selectedRecipe.id || h.title === selectedRecipe.title) ? 'history' : 'planner';
-              navigateTo(prevView);
-            }} 
-            onCooked={() => setShowConfirm(true)}
-            onSave={() => handleSaveRecipe(selectedRecipe)}
-            isSaved={history.some(h => h.id === selectedRecipe.id || h.title === selectedRecipe.title)}
-            onAlert={setAlertMessage}
           />
         )}
       </main>
 
-      {showConfirm && selectedRecipe && (
-        <ConsumptionModal
-          recipe={selectedRecipe}
-          ingredients={ingredients}
-          onConfirm={handleCookDone}
-          onClose={() => setShowConfirm(false)}
-        />
-      )}
+      {showConfirm && selectedRecipe && <ConsumptionModal recipe={selectedRecipe} ingredients={ingredients} onConfirm={handleCookDone} onClose={() => setShowConfirm(false)} />}
 
       {view !== 'recipe-detail' && (
-        <div
-          className="glass-nav border-t border-stone-200 px-4 py-3 flex justify-between items-center z-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.06)]"
-          style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
-        >
-          <button
-            onClick={() => navigateTo('dashboard')}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${
-              view === 'dashboard' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'
-            }`}
-          >
-            <TrendingUp size={26} strokeWidth={view === 'dashboard' ? 3 : 2.5}/>
-            <span className="text-[10px] font-black uppercase tracking-wider">Panel</span>
-          </button>
-          <button
-            onClick={() => navigateTo('pantry')}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${
-              view === 'pantry' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'
-            }`}
-          >
-            <LayoutGrid size={26} strokeWidth={view === 'pantry' ? 3 : 2.5}/>
-            <span className="text-[10px] font-black uppercase tracking-wider">Nevera</span>
-          </button>
-          
-          <button
-            onClick={() => navigateTo('planner')}
-            className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-full -mt-6 shadow-lg transition-all duration-300 active:scale-90 border-4 border-[#FDFBF7] ${
-              view === 'planner' ? 'bg-[#5CB82C] text-white shadow-[0_10px_20px_rgba(92,184,44,0.4)]' : 'bg-stone-800 text-white hover:bg-black hover:shadow-xl'
-            }`}
-          >
-            <ChefHat size={26} strokeWidth={2.5} className={view === 'planner' ? 'animate-wiggle' : ''}/>
-          </button>
-
-          <button
-            onClick={() => navigateTo('shopping')}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${
-              view === 'shopping' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'
-            }`}
-          >
-            <ShoppingCart size={26} strokeWidth={view === 'shopping' ? 3 : 2.5}/>
-            <span className="text-[10px] font-black uppercase tracking-wider">Compra</span>
-          </button>
-          <button
-            onClick={() => navigateTo('history')}
-            className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${
-              view === 'history' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'
-            }`}
-          >
-            <BookOpen size={26} strokeWidth={view === 'history' ? 3 : 2.5}/>
-            <span className="text-[10px] font-black uppercase tracking-wider">Recetario</span>
-          </button>
+        <div className="glass-nav border-t border-stone-200 px-4 py-3 flex justify-between items-center z-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.06)]" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+          <button onClick={() => navigateTo('dashboard')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'dashboard' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><TrendingUp size={26} strokeWidth={view === 'dashboard' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Panel</span></button>
+          <button onClick={() => navigateTo('pantry')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'pantry' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><LayoutGrid size={26} strokeWidth={view === 'pantry' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Nevera</span></button>
+          <button onClick={() => navigateTo('planner')} className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-full -mt-6 shadow-lg transition-all duration-300 active:scale-90 border-4 border-[#FDFBF7] ${view === 'planner' ? 'bg-[#5CB82C] text-white shadow-[0_10px_20px_rgba(92,184,44,0.4)]' : 'bg-stone-800 text-white hover:bg-black hover:shadow-xl'}`}><ChefHat size={26} strokeWidth={2.5} className={view === 'planner' ? 'animate-wiggle' : ''}/></button>
+          <button onClick={() => navigateTo('shopping')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'shopping' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><ShoppingCart size={26} strokeWidth={view === 'shopping' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Compra</span></button>
+          <button onClick={() => navigateTo('history')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'history' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><BookOpen size={26} strokeWidth={view === 'history' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Recetario</span></button>
         </div>
       )}
     </div>
