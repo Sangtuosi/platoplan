@@ -51,11 +51,19 @@ const CustomStyles = () => (
     @keyframes fadeSlide { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
     .animate-fade-slide { animation: fadeSlide 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     
-    @keyframes swipeLeft { 0% { transform: translateX(0) rotate(0deg); opacity: 1; } 100% { transform: translateX(-150%) rotate(-15deg); opacity: 0; } }
-    .animate-swipe-left { animation: swipeLeft 0.5s forwards; }
+    /* 🚀 ANIMACIONES TINDER MÁS LENTAS Y MARCADAS */
+    @keyframes swipeLeft { 
+      0% { transform: translateX(0) rotate(0deg); opacity: 1; } 
+      100% { transform: translateX(-200%) rotate(-25deg); opacity: 0; } 
+    }
+    .animate-swipe-left { animation: swipeLeft 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 
-    @keyframes swipeRight { 0% { transform: translateX(0) scale(1); opacity: 1; } 50% { transform: scale(1.05); } 100% { transform: translateX(150%) rotate(15deg); opacity: 0; } }
-    .animate-swipe-right { animation: swipeRight 0.5s forwards; }
+    @keyframes swipeRight { 
+      0% { transform: translateX(0) rotate(0deg); opacity: 1; } 
+      30% { transform: scale(1.08) rotate(5deg); } 
+      100% { transform: translateX(200%) rotate(25deg); opacity: 0; } 
+    }
+    .animate-swipe-right { animation: swipeRight 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 
     @keyframes shimmer { 100% { transform: translateX(100%); } }
     .animate-shimmer { position: relative; overflow: hidden; }
@@ -75,7 +83,6 @@ const CustomStyles = () => (
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
-    .glass-nav { background: rgba(253, 251, 247, 0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     .glass-modal { background: rgba(253, 251, 247, 0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
   `}} />
 );
@@ -103,7 +110,7 @@ type ExpiryStatus = 'fresh' | 'soon' | 'urgent';
 type IngredientCat = 'veg' | 'protein' | 'dairy' | 'pantry';
 
 interface Ingredient { id: string; name: string; quantity: string; expiryStatus: ExpiryStatus; category: IngredientCat; }
-interface Recipe { id?: string; title: string; description: string; health_benefit?: string; time: string; calories: number; ingredients: string[]; steps: string[]; priceEstimate: number; wasteValue: number; date?: string; }
+interface Recipe { id?: string; title: string; description: string; health_benefit?: string; time: string; calories: number; ingredients: any[]; steps: any[]; priceEstimate: number; wasteValue: number; date?: string; }
 interface BatchMasterclass { intro: string; storage_tips: string[]; step_by_step: { phase: string; tasks: string[] }[]; }
 interface MealPlan { type: 'daily' | 'batch'; lunch?: Recipe; lunch_alt?: Recipe; dinner?: Recipe; dinner_alt?: Recipe; days?: { day: number; lunch: Recipe; dinner: Recipe }[]; batch_masterclass?: BatchMasterclass; shopping_list?: string[]; }
 interface UserProfile { name: string; style: string; allergies: string[]; people: number; ages: string; robot: string; }
@@ -158,7 +165,7 @@ const LOADING_MESSAGES = [
   "Haciendo magia con lo que tienes... ✨"
 ];
 
-// --- 5. LÓGICA DE IA (TEXTO Y VISIÓN) ---
+// --- 5. LÓGICA DEL MOTOR COGNITIVO (TEXTO Y VISIÓN) ---
 
 const scanIngredientsFromImage = async (apiKey: string, base64Image: string, mimeType: string): Promise<any[]> => {
   try {
@@ -237,7 +244,7 @@ const generateRealPlan = async (
       4. TÍTULOS CLAROS: El 'title' debe ser el nombre real y claro del plato (Ej: 'Pollo asado al limón'). PROHIBIDO usar nombres poéticos o abstractos en el título.
       5. TONO: Descripciones muy creativas, divertidas y mágicas.
       6. REGLA DE CENAS LIGERAS: Las recetas asignadas a 'dinner' o 'dinner_alt' DEBEN SER CENAS MUY LIGERAS (ensaladas, pescado, tortillas, cremas). PROHIBIDO estofados, legumbres pesadas o grandes platos de pasta por la noche.
-      7. BENEFICIO DE SALUD: Llena el campo 'health_benefit' con una frase súper corta (4-6 palabras) sobre el beneficio principal de este plato para el cuerpo (Ej: "Proteína pura para tus músculos 💪", o "Muy ligero para dormir del tirón 🌙").
+      7. BENEFICIO DE SALUD: Llena el campo 'health_benefit' con una frase súper corta y atractiva sobre los beneficios de este plato para el cuerpo (Ej: "Proteína pura para tus músculos 💪", o "Muy ligero para dormir del tirón 🌙").
     `;
 
     if (planType === 'daily') {
@@ -320,13 +327,15 @@ const CustomConfirm = ({ message, onConfirm, onCancel }: { message: string, onCo
   );
 };
 
+// 🚀 TRADUCTOR UNIVERSAL (BLINDADO)
 const FormattedText = ({ text }: { text: any }) => {
   if (!text) return null;
-  let strText = '';
   
+  let strText = '';
   if (typeof text === 'string') {
     strText = text;
   } else if (typeof text === 'object') {
+    // Si la IA manda un objeto, buscamos su contenido para no romper React
     strText = text.step || text.text || text.description || text.name || Object.values(text)[0] || JSON.stringify(text);
   }
   
@@ -516,7 +525,7 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
             }} 
             className="w-full py-5 bg-[#5CB82C] text-white rounded-[1.2rem] font-bold text-lg shadow-lg active:scale-95 transition-all hover:bg-[#4a9c22] hover:shadow-xl"
           >
-            {step === INTRO_SLIDES.length - 1 ? '¡Empezar a Cocinar! 🍳' : 'Siguiente Mágia ✨'}
+            {step === INTRO_SLIDES.length - 1 ? '¡Empezar a Cocinar! 🍳' : 'Siguiente Magia ✨'}
           </button>
         </div>
       </div>
@@ -1038,6 +1047,7 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
 
   const handleSwipe = (direction: 'left' | 'right') => {
     setAnimationClass(direction === 'left' ? 'animate-swipe-left' : 'animate-swipe-right');
+    
     setTimeout(() => {
       if (direction === 'left') {
         if (swipePhase === 'lunch') {
@@ -1051,7 +1061,7 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
         if (swipePhase === 'lunch') setSwipePhase('dinner'); else setSwipePhase('done');
       }
       setAnimationClass('');
-    }, 400); 
+    }, 750); 
   };
 
   const renderTinderCard = (title: string, r: any) => {
@@ -1287,17 +1297,30 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
 const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: RecipeDetailProps) => {
   if (!recipe || !recipe.title) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#FDFBF7] animate-in fade-in">
+      <div className="min-h-screen flex flex-col items-center justify-center p-8 bg-[#FDFBF7] animate-in fade-in z-50 relative">
         <div className="text-6xl mb-6 animate-wiggle">🌪️</div>
         <p className="font-black text-xl text-stone-800 mb-2 text-center">¡El Chef ha perdido el papel!</p>
-        <p className="font-medium text-stone-500 mb-10 text-center">Vuelve atrás e intenta abrirlo de nuevo.</p>
-        <button onClick={onBack} className="p-5 bg-stone-900 text-white rounded-[1.5rem] font-black w-full shadow-lg active:scale-95 transition-all">Volver</button>
+        <p className="font-medium text-stone-500 mb-10 text-center">Parece que la magia falló esta vez. Vuelve atrás e intenta abrirlo de nuevo.</p>
+        <button onClick={onBack} className="p-5 bg-stone-900 text-white rounded-[1.5rem] font-black w-full shadow-lg active:scale-95 transition-all">Volver al Panel</button>
       </div>
     );
   }
 
-  const safeIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
-  const safeSteps = Array.isArray(recipe.steps) ? recipe.steps : [];
+  let rawIng = recipe?.ingredients;
+  let rawSteps = recipe?.steps || (recipe as any)?.instructions || [];
+  
+  let safeIngredients = [];
+  if (Array.isArray(rawIng)) safeIngredients = rawIng;
+  else if (typeof rawIng === 'object' && rawIng !== null) safeIngredients = Object.values(rawIng);
+  else if (typeof rawIng === 'string') safeIngredients = [rawIng];
+
+  let safeSteps = [];
+  if (Array.isArray(rawSteps)) safeSteps = rawSteps;
+  else if (typeof rawSteps === 'object' && rawSteps !== null) safeSteps = Object.values(rawSteps);
+  else if (typeof rawSteps === 'string') safeSteps = [rawSteps];
+
+  if (safeIngredients.length === 0) safeIngredients = ["Pizca de magia... (El Asistente no envió los ingredientes)"];
+  if (safeSteps.length === 0) safeSteps = ["Usa tu instinto culinario para este plato... (El Asistente no envió los pasos)"];
 
   const shareRecipe = () => {
     const ingText = safeIngredients.map(i => `🔸 ${typeof i === 'string' ? i : (i as any).name || ''}`).join('\n');
@@ -1650,7 +1673,6 @@ export default function App() {
         {view === 'history' && <HistoryView history={history} onDeleteAll={handleClearHistory} onDeleteRecipe={handleDeleteRecipe} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} />}
         {view === 'planner' && <PlannerView plan={plan} onReset={() => { setPlan(null); localStorage.removeItem('platoplan_current_plan'); }} loading={loading} loadingStartTime={loadingStartTime} onGenerate={generate} planType={planType} setPlanType={setPlanType} batchConfig={batchConfig} setBatchConfig={setBatchConfig} mode={mode} setMode={setMode} profile={profile} setProfile={saveProfileCloud} onLogout={handleLogout} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} onAddMissingToShoppingList={handleAddMissingToShoppingList} onAlert={setAlertMessage} />}
         
-        {/* 🚀 BUG DE PANTALLA BLANCA SOLUCIONADO AQUÍ: */}
         {view === 'recipe-detail' && (
           <RecipeDetail 
             recipe={selectedRecipe as Recipe} 
@@ -1669,8 +1691,9 @@ export default function App() {
 
       {showConfirm && selectedRecipe && <ConsumptionModal recipe={selectedRecipe} ingredients={ingredients} onConfirm={handleCookDone} onClose={() => setShowConfirm(false)} />}
 
+      {/* 🚀 BARRA INFERIOR 100% OPACA Y SÓLIDA PARA EVITAR TRANSPARENCIAS */}
       {view !== 'recipe-detail' && (
-        <div className="glass-nav border-t border-stone-200 px-4 py-3 flex justify-between items-center z-50 fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-15px_40px_rgba(0,0,0,0.06)]" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+        <div className="bg-[#FDFBF7] border-t border-stone-200 px-4 py-3 flex justify-between items-center z-[100] fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-10px_30px_rgba(0,0,0,0.05)]" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
           <button onClick={() => navigateTo('dashboard')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'dashboard' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><TrendingUp size={26} strokeWidth={view === 'dashboard' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Panel</span></button>
           <button onClick={() => navigateTo('pantry')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'pantry' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><LayoutGrid size={26} strokeWidth={view === 'pantry' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Nevera</span></button>
           <button onClick={() => navigateTo('planner')} className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-full -mt-6 shadow-lg transition-all duration-300 active:scale-90 border-4 border-[#FDFBF7] ${view === 'planner' ? 'bg-[#5CB82C] text-white shadow-[0_10px_20px_rgba(92,184,44,0.4)]' : 'bg-stone-800 text-white hover:bg-black hover:shadow-xl'}`}><ChefHat size={26} strokeWidth={2.5} className={view === 'planner' ? 'animate-wiggle' : ''}/></button>
