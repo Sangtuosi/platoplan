@@ -9,7 +9,7 @@ import {
   Save, Leaf, Scale, Check, BookOpen, 
   Repeat, ShoppingCart, CalendarDays, ListChecks, ChevronRight, 
   Utensils, PartyPopper, Star, Share2, Trash, Search, 
-  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Camera, Heart, XOctagon
+  ChevronLeft, ThermometerSnowflake, Settings2, X, Loader2, User, AlertCircle, Bell, Camera, Heart, XOctagon, Bookmark
 } from 'lucide-react';
 
 // --- 1. CONFIGURACIÓN DE SERVIDORES Y PRODUCCIÓN ---
@@ -83,11 +83,11 @@ const CustomStyles = () => (
 // --- ALGORITMO VISUAL PARA EL RECETARIO (NIVEL DIOS) ---
 const getEmojiForRecipe = (title: string) => {
   const t = (title || "").toLowerCase();
-  if (t.includes('pollo')) return '🍗';
-  if (t.includes('ensalada') || t.includes('verdura') || t.includes('verde') || t.includes('calabacín')) return '🥗';
+  if (t.includes('pollo') || t.includes('pavo')) return '🍗';
+  if (t.includes('ensalada') || t.includes('verdura') || t.includes('verde') || t.includes('calabacín') || t.includes('brócoli')) return '🥗';
   if (t.includes('pasta') || t.includes('macarrones') || t.includes('espagueti')) return '🍝';
   if (t.includes('arroz') || t.includes('paella') || t.includes('risotto')) return '🥘';
-  if (t.includes('pescado') || t.includes('salmón') || t.includes('atún') || t.includes('merluza')) return '🐟';
+  if (t.includes('pescado') || t.includes('salmón') || t.includes('atún') || t.includes('merluza') || t.includes('dorada') || t.includes('lubina')) return '🐟';
   if (t.includes('huevo') || t.includes('tortilla') || t.includes('revuelto')) return '🍳';
   if (t.includes('sopa') || t.includes('crema') || t.includes('puré') || t.includes('caldo')) return '🥣';
   if (t.includes('carne') || t.includes('ternera') || t.includes('cerdo') || t.includes('hamburguesa') || t.includes('lomo')) return '🥩';
@@ -95,6 +95,7 @@ const getEmojiForRecipe = (title: string) => {
   if (t.includes('taco') || t.includes('fajita') || t.includes('burrito')) return '🌮';
   if (t.includes('patata') || t.includes('frita')) return '🍟';
   if (t.includes('postre') || t.includes('dulce') || t.includes('tarta') || t.includes('bizcocho')) return '🍰';
+  if (t.includes('lentejas') || t.includes('garbanzos') || t.includes('alubias') || t.includes('frijoles')) return '🍲';
   return '🍽️'; 
 };
 
@@ -160,7 +161,7 @@ const DIET_OPTIONS = [
 const DISLIKES_OPTIONS = [
   'Aguacate', 'Ternera', 'Pimientos', 'Coliflor', 'Berenjena',
   'Huevos', 'Queso de cabra', 'Champiñones', 'Cerdo', 'Salmón',
-  'Marisco', 'Atún', 'Cilantro', 'Lácteos', 'Gluten'
+  'Marisco', 'Atún', 'Cilantro', 'Lácteos', 'Gluten', 'Picante'
 ];
 
 const ROBOT_OPTIONS = [
@@ -180,7 +181,7 @@ const LOADING_MESSAGES = [
   "Haciendo magia con lo que tienes... ✨"
 ];
 
-// --- 5. LÓGICA DE IA (TEXTO Y VISIÓN) ---
+// --- 5. LÓGICA DE MOTOR COGNITIVO (TEXTO Y VISIÓN) ---
 
 const scanIngredientsFromImage = async (apiKey: string, base64Image: string, mimeType: string): Promise<any[]> => {
   try {
@@ -487,11 +488,36 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
   const [step, setStep] = useState(0); 
   
   const INTRO_SLIDES = [
-    { title: "El Escáner Mágico", text: "Hazle una foto a tu ticket del súper o a tu encimera. Nuestro Asistente Virtual identificará y ordenará toda tu comida en un segundo. 📸", icon: <Camera size={80} className="text-stone-700"/>, color: "bg-teal-100" },
-    { title: "Magia Anti-Sobras", text: "Dile al Chef qué ingredientes están a punto de caducar y él inventará una receta de aprovechamiento espectacular de la nada. 🦸‍♂️", icon: <Leaf size={80} className="text-stone-700"/>, color: "bg-green-100" },
-    { title: "El Tinder del Sabor", text: "Desliza recetas a la izquierda si no te apetecen, y a la derecha si te enamoran. Comer sano ahora es un juego. 💖", icon: <Heart size={80} className="text-stone-700"/>, color: "bg-rose-100" },
-    { title: "La Hucha Feliz", text: "Cada vez que cocinas en casa en vez de pedir comida, tu cerdito se llena. Mira cuánto ahorras al mes sin darte cuenta. 🐷", icon: <TrendingUp size={80} className="text-stone-700"/>, color: "bg-orange-100" },
-    { title: "Lista Inteligente", text: "Lo que te falte se añade solo a la lista de la compra. Tacha en el súper con un toque y listo. 🛒", icon: <CheckCircle2 size={80} className="text-stone-700"/>, color: "bg-blue-100" }
+    { 
+      title: "El Escáner Mágico", 
+      text: "Hazle una foto a tu ticket del súper o a tu encimera. Nuestro Asistente Virtual identificará y ordenará toda tu comida en un segundo. 📸", 
+      icon: <Camera size={80} className="text-stone-700"/>, 
+      color: "bg-teal-100" 
+    },
+    { 
+      title: "Magia Anti-Sobras", 
+      text: "Dile al Chef qué ingredientes están a punto de caducar y él inventará una receta de aprovechamiento espectacular de la nada. 🦸‍♂️", 
+      icon: <Leaf size={80} className="text-stone-700"/>, 
+      color: "bg-green-100" 
+    },
+    { 
+      title: "El Tinder del Sabor", 
+      text: "Desliza recetas a la izquierda si no te apetecen, y a la derecha si te enamoran. Comer sano ahora es un juego. 💖", 
+      icon: <Heart size={80} className="text-stone-700"/>, 
+      color: "bg-rose-100" 
+    },
+    { 
+      title: "La Hucha Feliz", 
+      text: "Cada vez que cocinas en casa en vez de pedir comida o ir a restaurantes, tu cerdito se llena. Mira cuánto ahorras al mes sin darte cuenta. 🐷", 
+      icon: <TrendingUp size={80} className="text-stone-700"/>, 
+      color: "bg-orange-100" 
+    },
+    { 
+      title: "Lista Inteligente", 
+      text: "Lo que te falte se añade solo a la lista de la compra. Tacha en el súper con un solo toque y domina tus recados. 🛒", 
+      icon: <CheckCircle2 size={80} className="text-stone-700"/>, 
+      color: "bg-blue-100" 
+    }
   ];
 
   return (
@@ -1068,7 +1094,7 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
         if (swipePhase === 'lunch') setSwipePhase('dinner'); else setSwipePhase('done');
       }
       setAnimationClass('');
-    }, 400); 
+    }, 750); 
   };
 
   const renderTinderCard = (title: string, r: any) => {
