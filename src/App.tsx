@@ -51,19 +51,11 @@ const CustomStyles = () => (
     @keyframes fadeSlide { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
     .animate-fade-slide { animation: fadeSlide 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     
-    /* 🚀 ANIMACIONES TINDER MÁS LENTAS Y MARCADAS */
-    @keyframes swipeLeft { 
-      0% { transform: translateX(0) rotate(0deg); opacity: 1; } 
-      100% { transform: translateX(-200%) rotate(-25deg); opacity: 0; } 
-    }
-    .animate-swipe-left { animation: swipeLeft 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    @keyframes swipeLeft { 0% { transform: translateX(0) rotate(0deg); opacity: 1; } 100% { transform: translateX(-150%) rotate(-15deg); opacity: 0; } }
+    .animate-swipe-left { animation: swipeLeft 0.5s forwards; }
 
-    @keyframes swipeRight { 
-      0% { transform: translateX(0) rotate(0deg); opacity: 1; } 
-      30% { transform: scale(1.08) rotate(5deg); } 
-      100% { transform: translateX(200%) rotate(25deg); opacity: 0; } 
-    }
-    .animate-swipe-right { animation: swipeRight 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    @keyframes swipeRight { 0% { transform: translateX(0) scale(1); opacity: 1; } 50% { transform: scale(1.05); } 100% { transform: translateX(150%) rotate(15deg); opacity: 0; } }
+    .animate-swipe-right { animation: swipeRight 0.5s forwards; }
 
     @keyframes shimmer { 100% { transform: translateX(100%); } }
     .animate-shimmer { position: relative; overflow: hidden; }
@@ -83,6 +75,7 @@ const CustomStyles = () => (
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     
+    .glass-nav { background: rgba(253, 251, 247, 0.96); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
     .glass-modal { background: rgba(253, 251, 247, 0.95); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); }
   `}} />
 );
@@ -103,6 +96,28 @@ const getEmojiForRecipe = (title: string) => {
   if (t.includes('patata') || t.includes('frita')) return '🍟';
   if (t.includes('postre') || t.includes('dulce') || t.includes('tarta') || t.includes('bizcocho')) return '🍰';
   return '🍽️'; 
+};
+
+// 🚀 ESCUDO ANTI-CRASHES: Este traductor asegura que la IA nunca rompa la app.
+const getSafeString = (val: any): string => {
+  try {
+    if (!val) return "";
+    if (typeof val === 'string') return val;
+    if (Array.isArray(val)) return val.map(getSafeString).join(', ');
+    if (typeof val === 'object') {
+      if (val.title && val.description) return `**${val.title}**: ${val.description}`;
+      if (val.step && val.description) return `**${val.step}**: ${val.description}`;
+      if (val.name && val.quantity) return `${val.quantity} ${val.name}`;
+      if (val.name) return val.name;
+      if (val.description) return val.description;
+      if (val.instruction) return val.instruction;
+      if (val.text) return val.text;
+      return Object.values(val).map(v => typeof v === 'string' ? v : JSON.stringify(v)).join(' ');
+    }
+    return String(val);
+  } catch (e) {
+    return "Detalle mágico...";
+  }
 };
 
 // --- 3. TIPOS E INTERFACES ESTRICTAS ---
@@ -165,7 +180,7 @@ const LOADING_MESSAGES = [
   "Haciendo magia con lo que tienes... ✨"
 ];
 
-// --- 5. LÓGICA DEL MOTOR COGNITIVO (TEXTO Y VISIÓN) ---
+// --- 5. LÓGICA DE IA (TEXTO Y VISIÓN) ---
 
 const scanIngredientsFromImage = async (apiKey: string, base64Image: string, mimeType: string): Promise<any[]> => {
   try {
@@ -327,23 +342,9 @@ const CustomConfirm = ({ message, onConfirm, onCancel }: { message: string, onCo
   );
 };
 
-// 🚀 TRADUCTOR UNIVERSAL (BLINDADO)
-const FormattedText = ({ text }: { text: any }) => {
-  if (!text) return null;
-  
-  let strText = '';
-  if (typeof text === 'string') {
-    strText = text;
-  } else if (typeof text === 'object') {
-    // Si la IA manda un objeto, buscamos su contenido para no romper React
-    strText = text.step || text.text || text.description || text.name || Object.values(text)[0] || JSON.stringify(text);
-  }
-  
-  if (typeof strText !== 'string') {
-    strText = String(strText);
-  }
-  
-  const parts = strText.split(/(\*\*.*?\*\*)/g);
+const FormattedText = ({ text }: { text: string }) => {
+  if (!text || typeof text !== 'string') return null;
+  const parts = text.split(/(\*\*.*?\*\*)/g);
   return (
     <span>
       {parts.map((part, i) => (
@@ -533,8 +534,8 @@ const OnboardingView = ({ onComplete }: OnboardingProps) => {
   );
 };
 
-interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; streak: number; }
-const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry, streak }: DashboardProps) => {
+interface DashboardProps { savings: number; wasteSaved: number; totalItems: number; profileName: string; urgentCount: number; onViewPantry: () => void; streak: number; onOpenSettings: () => void; }
+const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCount, onViewPantry, streak, onOpenSettings }: DashboardProps) => {
   const level = useMemo(() => {
     if (savings < 30) return { name: "Pinche Aprendiz", icon: "🌱", color: "text-stone-500", next: 30 };
     if (savings < 100) return { name: "Chef con Arte", icon: "👨‍🍳", color: "text-teal-500", next: 100 };
@@ -585,7 +586,11 @@ const DashboardView = ({ savings, wasteSaved, totalItems, profileName, urgentCou
           <h1 className="text-3xl font-black text-stone-800 tracking-tight">¡Hola, Chef! 👋</h1>
           <p className="text-stone-400 text-sm font-bold mt-1">{randomGreeting}</p>
         </div>
-        <div className="flex flex-col items-end">
+        <div className="flex flex-col items-end gap-2">
+           {/* 🚀 BOTÓN DE AJUSTES GLOBALES */}
+           <div onClick={onOpenSettings} className="bg-white w-12 h-12 rounded-[1rem] shadow-[0_5px_15px_rgba(0,0,0,0.05)] border border-stone-100 flex items-center justify-center cursor-pointer active:scale-90 transition-transform">
+             <Settings2 className="text-teal-500" size={24} />
+           </div>
            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-stone-100 shadow-sm ${streak > 0 ? 'bg-orange-50 text-orange-600' : 'bg-stone-50 text-stone-400'}`}>
               <Flame size={16} className={streak > 0 ? 'animate-pulse' : ''} />
               <span className="font-black text-sm">{streak} Días</span>
@@ -942,10 +947,11 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
   const [pushGranted, setPushGranted] = useState(false);
 
   useEffect(() => {
+    setL(profile); // Asegura que siempre coge los datos actualizados
     if (typeof window !== 'undefined' && OneSignal && isOneSignalInitialized) {
       setPushGranted(Notification.permission === "granted");
     }
-  }, []);
+  }, [profile]);
 
   const toggleAllergy = (allergy: string) => {
     const current = Array.isArray(l.allergies) ? l.allergies : [];
@@ -968,74 +974,76 @@ const TribeSettings = ({ profile, setProfile, onClose, onLogout, onAlert }: Trib
   };
 
   return (
-    <div className="bg-white rounded-[2rem] border border-stone-100 p-6 shadow-xl mb-8 animate-in slide-in-from-top-4 relative z-20">
-      <button onClick={onClose} className="absolute top-6 right-6 text-stone-400 hover:text-stone-800 bg-stone-50 p-2 rounded-full active:scale-90"><X size={20}/></button>
-      <h2 className="text-2xl font-black text-stone-800 mb-8 flex items-center gap-2"><Settings2 className="text-teal-500"/> Ajustes</h2>
-      
-      <div className="space-y-8">
-        <div>
-          <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3 block">Comensales y Edades</label>
-          <div className="flex gap-4 items-center mb-4 bg-stone-50 p-2 rounded-[1.5rem] w-fit border border-stone-100">
-            <button onClick={() => setL({ ...l, people: Math.max(1, l.people - 1) })} className="w-12 h-12 rounded-[1rem] bg-white shadow-sm font-black text-xl text-stone-600 active:scale-90">-</button>
-            <span className="text-2xl font-black text-stone-800 w-8 text-center">{l.people}</span>
-            <button onClick={() => setL({ ...l, people: l.people + 1 })} className="w-12 h-12 rounded-[1rem] bg-teal-500 text-white shadow-md font-black text-xl active:scale-90">+</button>
-          </div>
-          <input value={l.ages} onChange={e => setL({ ...l, ages: e.target.value })} placeholder="Ej: 2 Adultos, 1 Niño (5 años)" className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm" />
-        </div>
+    <div className="fixed inset-0 bg-stone-900/50 backdrop-blur-md flex items-end justify-center p-4 z-[100] animate-in fade-in duration-300">
+      <div className="bg-white w-full max-w-md rounded-[3rem] p-8 shadow-[0_-20px_60px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom-8 border-t border-white/50 relative overflow-hidden max-h-[90vh] overflow-y-auto no-scrollbar">
+        <div className="w-16 h-1.5 bg-stone-300/50 rounded-full mx-auto mb-6"></div>
+        <button onClick={onClose} className="absolute top-6 right-6 text-stone-400 hover:text-stone-800 bg-stone-50 p-2 rounded-full active:scale-90"><X size={20}/></button>
+        <h2 className="text-2xl font-black text-stone-800 mb-8 flex items-center gap-2"><Settings2 className="text-teal-500"/> Ajustes Globales</h2>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-8">
           <div>
-            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Dieta</label>
-            <select value={l.style} onChange={e => setL({ ...l, style: e.target.value })} className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm">
-              {DIET_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.id}</option>)}
-            </select>
+            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3 block">Comensales y Edades</label>
+            <div className="flex gap-4 items-center mb-4 bg-stone-50 p-2 rounded-[1.5rem] w-fit border border-stone-100">
+              <button onClick={() => setL({ ...l, people: Math.max(1, l.people - 1) })} className="w-12 h-12 rounded-[1rem] bg-white shadow-sm font-black text-xl text-stone-600 active:scale-90">-</button>
+              <span className="text-2xl font-black text-stone-800 w-8 text-center">{l.people}</span>
+              <button onClick={() => setL({ ...l, people: l.people + 1 })} className="w-12 h-12 rounded-[1rem] bg-teal-500 text-white shadow-md font-black text-xl active:scale-90">+</button>
+            </div>
+            <input value={l.ages} onChange={e => setL({ ...l, ages: e.target.value })} placeholder="Ej: 2 Adultos, 1 Niño (5 años)" className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm" />
           </div>
-          <div>
-            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Robot</label>
-            <select value={l.robot} onChange={e => setL({ ...l, robot: e.target.value })} className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm">
-              {ROBOT_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Dieta</label>
+              <select value={l.style} onChange={e => setL({ ...l, style: e.target.value })} className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm">
+                {DIET_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.id}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 block">Robot</label>
+              <select value={l.robot} onChange={e => setL({ ...l, robot: e.target.value })} className="w-full p-4 bg-white rounded-xl font-bold border border-stone-200 outline-none focus:border-teal-400 text-stone-700 text-sm shadow-sm">
+                {ROBOT_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
           </div>
-        </div>
 
-        <div>
-          <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3 flex justify-between">
-            <span>Alergias / Odios</span>
-            <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md">{Array.isArray(l.allergies) ? l.allergies.length : 0} Activas</span>
-          </label>
-          <div className="flex gap-2 mb-4">
-            <input value={customAllergy} onChange={e => setCustomAllergy(e.target.value)} placeholder="Ej: Canela..." className="flex-1 p-3 rounded-xl border border-stone-200 outline-none focus:border-orange-400 font-bold text-sm bg-white shadow-sm" onKeyDown={e => e.key === 'Enter' && addCustomAllergy()} />
-            <button onClick={addCustomAllergy} className="bg-stone-800 text-white px-5 rounded-xl font-bold text-sm shadow-md active:scale-95">Añadir</button>
+          <div>
+            <label className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3 flex justify-between">
+              <span>Alergias / Odios</span>
+              <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md">{Array.isArray(l.allergies) ? l.allergies.length : 0} Activas</span>
+            </label>
+            <div className="flex gap-2 mb-4">
+              <input value={customAllergy} onChange={e => setCustomAllergy(e.target.value)} placeholder="Ej: Canela..." className="flex-1 p-3 rounded-xl border border-stone-200 outline-none focus:border-orange-400 font-bold text-sm bg-white shadow-sm" onKeyDown={e => e.key === 'Enter' && addCustomAllergy()} />
+              <button onClick={addCustomAllergy} className="bg-stone-800 text-white px-5 rounded-xl font-bold text-sm shadow-md active:scale-95">Añadir</button>
+            </div>
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto no-scrollbar pb-4">
+              {Array.from(new Set([...(l.allergies || []), ...DISLIKES_OPTIONS])).map(a => {
+                const isSel = (l.allergies || []).includes(a as string);
+                return (
+                  <button key={a as string} onClick={() => toggleAllergy(a as string)} className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 ${isSel ? 'bg-orange-400 text-white shadow-md' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>
+                    {a as string}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto no-scrollbar pb-4">
-            {Array.from(new Set([...(l.allergies || []), ...DISLIKES_OPTIONS])).map(a => {
-              const isSel = (l.allergies || []).includes(a as string);
-              return (
-                <button key={a as string} onClick={() => toggleAllergy(a as string)} className={`px-4 py-2.5 rounded-xl font-bold text-xs transition-all active:scale-95 ${isSel ? 'bg-orange-400 text-white shadow-md' : 'bg-stone-50 text-stone-500 hover:bg-stone-100'}`}>
-                  {a as string}
-                </button>
-              );
-            })}
+          
+          <div className="pt-4 border-t border-stone-100 space-y-3">
+            {!pushGranted ? (
+              <button onClick={requestNotifications} className="w-full py-4 bg-teal-50 text-teal-600 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 active:scale-95"><Bell size={18}/> Avisadme de caducidades</button>
+            ) : (
+              <div className="w-full py-4 bg-stone-50 text-stone-400 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 border border-stone-100"><CheckCircle2 size={18} className="text-teal-500"/> Avisos activos</div>
+            )}
+            <button onClick={() => { setProfile(l); onClose(); }} className="w-full py-5 bg-stone-900 text-white rounded-[1.2rem] font-black text-lg shadow-lg active:scale-95 flex justify-center items-center gap-2"><Save size={20}/> Guardar Cambios</button>
+            <button onClick={onLogout} className="w-full py-4 text-rose-500 bg-rose-50 rounded-[1.2rem] font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 active:scale-95"><User size={16}/> Cerrar Sesión</button>
           </div>
-        </div>
-        
-        <div className="pt-4 border-t border-stone-100 space-y-3">
-          {!pushGranted ? (
-            <button onClick={requestNotifications} className="w-full py-4 bg-teal-50 text-teal-600 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 active:scale-95"><Bell size={18}/> Avisadme de caducidades</button>
-          ) : (
-            <div className="w-full py-4 bg-stone-50 text-stone-400 rounded-[1.2rem] font-bold text-sm flex justify-center items-center gap-2 border border-stone-100"><CheckCircle2 size={18} className="text-teal-500"/> Avisos activos</div>
-          )}
-          <button onClick={() => { setProfile(l); onClose(); }} className="w-full py-5 bg-stone-900 text-white rounded-[1.2rem] font-black text-lg shadow-lg active:scale-95 flex justify-center items-center gap-2"><Save size={20}/> Guardar Cambios</button>
-          <button onClick={onLogout} className="w-full py-4 text-rose-500 bg-rose-50 rounded-[1.2rem] font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 active:scale-95"><User size={16}/> Salir de la cocina</button>
         </div>
       </div>
     </div>
   );
 };
 
-interface PlannerProps { plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number; onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void; mode: 'aprovechamiento'|'chef'; setMode: (m: 'aprovechamiento'|'chef') => void; profile: UserProfile; setProfile: (p: UserProfile) => void; onViewRecipe: (r: Recipe) => void; batchConfig: BatchConfig; setBatchConfig: (c: BatchConfig) => void; onLogout: () => void; onAddMissingToShoppingList: (i: string[]) => void; onAlert: (m:string)=>void; }
-const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, planType, setPlanType, mode, setMode, profile, setProfile, onViewRecipe, batchConfig, setBatchConfig, onLogout, onAddMissingToShoppingList, onAlert }: PlannerProps) => {
-  const [showSettings, setShowSettings] = useState(false);
+interface PlannerProps { plan: MealPlan | null; onReset: () => void; loading: boolean; loadingStartTime: number; onGenerate: () => void; planType: 'daily'|'batch'; setPlanType: (t: 'daily'|'batch') => void; mode: 'aprovechamiento'|'chef'; setMode: (m: 'aprovechamiento'|'chef') => void; profile: UserProfile; onViewRecipe: (r: Recipe) => void; batchConfig: BatchConfig; setBatchConfig: (c: BatchConfig) => void; onAddMissingToShoppingList: (i: string[]) => void; onAlert: (m:string)=>void; onOpenSettings: () => void; }
+const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, planType, setPlanType, mode, setMode, profile, onViewRecipe, batchConfig, setBatchConfig, onAddMissingToShoppingList, onAlert, onOpenSettings }: PlannerProps) => {
   const [swipePhase, setSwipePhase] = useState<'lunch' | 'dinner' | 'done'>('lunch');
   const [lunchRejected, setLunchRejected] = useState(false);
   const [dinnerRejected, setDinnerRejected] = useState(false);
@@ -1047,7 +1055,6 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
 
   const handleSwipe = (direction: 'left' | 'right') => {
     setAnimationClass(direction === 'left' ? 'animate-swipe-left' : 'animate-swipe-right');
-    
     setTimeout(() => {
       if (direction === 'left') {
         if (swipePhase === 'lunch') {
@@ -1061,7 +1068,7 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
         if (swipePhase === 'lunch') setSwipePhase('dinner'); else setSwipePhase('done');
       }
       setAnimationClass('');
-    }, 750); 
+    }, 400); 
   };
 
   const renderTinderCard = (title: string, r: any) => {
@@ -1104,31 +1111,22 @@ const PlannerView = ({ plan, onReset, loading, loadingStartTime, onGenerate, pla
         <h1 className="text-3xl font-black text-stone-800 tracking-tight">Hacer Magia ✨</h1>
       </div>
 
-      {!plan && !loading && !showSettings && (
+      {!plan && !loading && (
         <div className="mb-8 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-sm">
           <div className="flex justify-between items-center mb-2">
             <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 1</span>
-            <button onClick={() => setShowSettings(true)} className="text-xs font-bold text-stone-400 underline">Editar</button>
+            <button onClick={onOpenSettings} className="text-xs font-bold text-stone-400 underline">Editar Ajustes</button>
           </div>
           <h3 className="font-black text-stone-800 mb-1">¿Para quién cocinamos?</h3>
           <p className="text-sm text-stone-500 font-medium capitalize">{profile.people} personas • Dieta {profile.style}</p>
         </div>
       )}
 
-      {showSettings && (
-         <div className="mb-8 p-6 bg-white rounded-[2rem] shadow-xl border border-stone-100 relative">
-            <button onClick={() => setShowSettings(false)} className="absolute top-4 right-4 text-stone-400"><X/></button>
-            <h3 className="font-black text-xl mb-4">Ajustes del Chef</h3>
-            <p className="text-stone-500 mb-4 text-sm">Cambia los invitados o alergias aquí.</p>
-            <button onClick={() => setShowSettings(false)} className="w-full py-4 bg-stone-900 text-white rounded-xl font-bold">Volver a Magia</button>
-         </div>
-      )}
-
       {plan && !loading && (
         <button onClick={() => { onReset(); setSwipePhase('lunch'); }} className="w-full mb-8 py-5 bg-rose-50 text-rose-600 font-black rounded-[1.5rem] flex items-center justify-center gap-2 active:scale-95 hover:bg-rose-100 transition-all"><Trash2 size={18}/> Empezar de cero</button>
       )}
       
-      {!plan && !loading && !showSettings && (
+      {!plan && !loading && (
         <div className="animate-in slide-in-from-bottom-8 duration-500">
           <div className="mb-2 flex items-center gap-2">
              <span className="text-xs font-black text-teal-600 bg-teal-50 px-3 py-1 rounded-lg uppercase tracking-widest">Paso 2</span>
@@ -1323,11 +1321,10 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
   if (safeSteps.length === 0) safeSteps = ["Usa tu instinto culinario para este plato... (El Asistente no envió los pasos)"];
 
   const shareRecipe = () => {
-    const ingText = safeIngredients.map(i => `🔸 ${typeof i === 'string' ? i : (i as any).name || ''}`).join('\n');
+    const ingText = safeIngredients.map(i => `🔸 ${getSafeString(i)}`).join('\n');
     let stepText = '';
     safeSteps.forEach((s, i) => {
-       const text = typeof s === 'string' ? s : (s as any).step || (s as any).text || (s as any).description || '';
-       stepText += `*${i+1}.* ${text}\n\n`;
+       stepText += `*${i+1}.* ${getSafeString(s)}\n\n`;
     });
     
     const txt = `✨ *PlatoPlan presenta:* ✨\n\n🍽️ *${recipe.title}*\n⏱️ ${recipe.time || 'Rápido'} | 🔥 ${recipe.calories || 0} kcal | 💰 Ahorro: ${recipe.wasteValue || 0}€\n\n🛒 *INGREDIENTES:*\n${ingText}\n\n👨‍🍳 *ELABORACIÓN:*\n${stepText}\n👇 *¿Tú también quieres cocinar sin estrés y ahorrar dinero?*\nÚnete a PlatoPlan y haz magia con tu nevera: https://platoplan.vercel.app`;
@@ -1371,7 +1368,7 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
           {safeIngredients.map((ing: any, i: number) => (
             <div key={i} className="p-4 bg-stone-50/50 rounded-xl font-bold text-sm border border-stone-100 flex items-start gap-3">
               <div className="w-2.5 h-2.5 mt-1 rounded-full bg-teal-500 shrink-0"></div>
-              <span className="text-stone-700 leading-snug"><FormattedText text={ing} /></span>
+              <span className="text-stone-700 leading-snug"><FormattedText text={getSafeString(ing)} /></span>
             </div>
           ))}
         </div>
@@ -1384,7 +1381,7 @@ const RecipeDetail = ({ recipe, onBack, onCooked, onSave, isSaved, onAlert }: Re
             <div key={i} className="flex gap-5 relative group">
               {i < safeSteps.length - 1 && <div className="absolute left-[1.1rem] top-12 bottom-[-2rem] w-[3px] bg-stone-100 rounded-full group-hover:bg-teal-200 transition-colors duration-500"></div>}
               <div className="shrink-0 w-10 h-10 bg-teal-50 text-teal-600 border-2 border-teal-100 rounded-[1.2rem] flex items-center justify-center text-lg font-black z-10 shadow-sm group-hover:scale-110 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">{i + 1}</div>
-              <p className="font-medium text-stone-600 pt-1.5 leading-relaxed text-[15px]"><FormattedText text={step} /></p>
+              <p className="font-medium text-stone-600 pt-1.5 leading-relaxed text-[15px]"><FormattedText text={getSafeString(step)} /></p>
             </div>
           ))}
         </div>
@@ -1401,7 +1398,10 @@ const ConsumptionModal = ({ recipe, ingredients, onConfirm, onClose }: Consumpti
   const safeRecIngs = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const relevant = useMemo(() => {
     const match = ingredients.filter((ing: any) =>
-      safeRecIngs.some((ri: any) => (typeof ri === 'string' ? ri : (ri.name || '')).toLowerCase().includes(ing.name.toLowerCase()))
+      safeRecIngs.some((ri: any) => {
+        const str = getSafeString(ri).toLowerCase();
+        return str.includes(ing.name.toLowerCase());
+      })
     );
     return match.length > 0 ? match : ingredients;
   }, [recipe, ingredients]);
@@ -1469,6 +1469,9 @@ export default function App() {
   const [planType, setPlanType] = useState<'daily' | 'batch'>('daily');
   const [batchConfig, setBatchConfig] = useState<BatchConfig>({ days: 3, meals: ['lunch', 'dinner'] });
   const [showConfirm, setShowConfirm] = useState(false);
+  
+  // 🚀 ESTADO PARA CONTROLAR EL MENÚ DE AJUSTES GLOBALES
+  const [showGlobalSettings, setShowGlobalSettings] = useState(false);
 
   const navigateTo = useCallback((newView: ViewState) => {
     localStorage.setItem('platoplan_current_view', newView);
@@ -1666,13 +1669,57 @@ export default function App() {
       <CustomAlert message={alertMessage} onClose={() => setAlertMessage('')} />
       {confirmAction && <CustomConfirm message={confirmAction.message} onConfirm={confirmAction.onConfirm} onCancel={() => setConfirmAction(null)} />}
 
+      {/* 🚀 MODAL GLOBAL DE AJUSTES (ACCESIBLE DESDE CUALQUIER PARTE) */}
+      {showGlobalSettings && (
+        <TribeSettings 
+          profile={profile} 
+          setProfile={(p) => { saveProfileCloud(p); setShowGlobalSettings(false); }} 
+          onClose={() => setShowGlobalSettings(false)} 
+          onLogout={handleLogout} 
+          onAlert={setAlertMessage} 
+        />
+      )}
+
       <main className="flex-1 overflow-y-auto no-scrollbar pb-32 scroll-smooth">
-        {view === 'dashboard' && <DashboardView savings={savings} wasteSaved={wasteSaved} totalItems={ingredients.length} profileName={profile.name} urgentCount={urgentCount} onViewPantry={() => navigateTo('pantry')} streak={streak} />}
+        {view === 'dashboard' && (
+          <DashboardView 
+            savings={savings} 
+            wasteSaved={wasteSaved} 
+            totalItems={ingredients.length} 
+            profileName={profile.name} 
+            urgentCount={urgentCount} 
+            onViewPantry={() => navigateTo('pantry')} 
+            streak={streak} 
+            onOpenSettings={() => setShowGlobalSettings(true)} 
+          />
+        )}
         {view === 'pantry' && <PantryView ingredients={ingredients} setIngredients={updatePantry} onAlert={setAlertMessage} />}
         {view === 'shopping' && <ShoppingView list={shoppingList} setList={updateList} onAlert={setAlertMessage} />}
         {view === 'history' && <HistoryView history={history} onDeleteAll={handleClearHistory} onDeleteRecipe={handleDeleteRecipe} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} />}
-        {view === 'planner' && <PlannerView plan={plan} onReset={() => { setPlan(null); localStorage.removeItem('platoplan_current_plan'); }} loading={loading} loadingStartTime={loadingStartTime} onGenerate={generate} planType={planType} setPlanType={setPlanType} batchConfig={batchConfig} setBatchConfig={setBatchConfig} mode={mode} setMode={setMode} profile={profile} setProfile={saveProfileCloud} onLogout={handleLogout} onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} onAddMissingToShoppingList={handleAddMissingToShoppingList} onAlert={setAlertMessage} />}
+        {view === 'planner' && (
+          <PlannerView 
+            plan={plan} 
+            onReset={() => { setPlan(null); localStorage.removeItem('platoplan_current_plan'); }} 
+            loading={loading} 
+            loadingStartTime={loadingStartTime} 
+            onGenerate={generate} 
+            planType={planType} 
+            setPlanType={setPlanType} 
+            batchConfig={batchConfig} 
+            setBatchConfig={setBatchConfig} 
+            mode={mode} 
+            setMode={setMode} 
+            profile={profile} 
+            setProfile={saveProfileCloud} 
+            onLogout={handleLogout} 
+            onViewRecipe={(r: Recipe) => { setSelectedRecipe(r); localStorage.setItem('platoplan_selected_recipe', JSON.stringify(r)); navigateTo('recipe-detail'); }} 
+            onAddMissingToShoppingList={handleAddMissingToShoppingList} 
+            onAlert={setAlertMessage} 
+            onOpenSettings={() => setShowGlobalSettings(true)} 
+          />
+        )}
         
+        {/* 🚀 BUG DE PANTALLA BLANCA SOLUCIONADO AQUÍ: */}
         {view === 'recipe-detail' && (
           <RecipeDetail 
             recipe={selectedRecipe as Recipe} 
@@ -1693,7 +1740,7 @@ export default function App() {
 
       {/* 🚀 BARRA INFERIOR 100% OPACA Y SÓLIDA PARA EVITAR TRANSPARENCIAS */}
       {view !== 'recipe-detail' && (
-        <div className="bg-[#FDFBF7] border-t border-stone-200 px-4 py-3 flex justify-between items-center z-[100] fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-10px_30px_rgba(0,0,0,0.05)]" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
+        <div className="bg-[#FDFBF7] border-t border-stone-200 px-4 py-3 flex justify-between items-center z-[50] fixed bottom-0 left-0 right-0 max-w-md mx-auto shadow-[0_-10px_30px_rgba(0,0,0,0.05)]" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
           <button onClick={() => navigateTo('dashboard')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'dashboard' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><TrendingUp size={26} strokeWidth={view === 'dashboard' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Panel</span></button>
           <button onClick={() => navigateTo('pantry')} className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-90 ${view === 'pantry' ? 'text-[#5CB82C] transform -translate-y-1' : 'text-stone-400 hover:text-stone-600'}`}><LayoutGrid size={26} strokeWidth={view === 'pantry' ? 3 : 2.5}/><span className="text-[10px] font-black uppercase tracking-wider">Nevera</span></button>
           <button onClick={() => navigateTo('planner')} className={`relative flex flex-col items-center justify-center w-14 h-14 rounded-full -mt-6 shadow-lg transition-all duration-300 active:scale-90 border-4 border-[#FDFBF7] ${view === 'planner' ? 'bg-[#5CB82C] text-white shadow-[0_10px_20px_rgba(92,184,44,0.4)]' : 'bg-stone-800 text-white hover:bg-black hover:shadow-xl'}`}><ChefHat size={26} strokeWidth={2.5} className={view === 'planner' ? 'animate-wiggle' : ''}/></button>
